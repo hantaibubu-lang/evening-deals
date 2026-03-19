@@ -8,9 +8,22 @@ export default function LoginPage() {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        // MVP: 단순 하드코딩 라우팅 (추후 Supabase 연동)
-        alert(`로그인 시도: ${email}`);
-        window.location.href = '/';
+        
+        let role = 'user';
+        if (email.includes('admin')) {
+            role = 'admin';
+        } else if (email.includes('manager')) {
+            role = 'manager';
+        }
+
+        // Save user role and email to mock auth state
+        localStorage.setItem('user', JSON.stringify({ email, role }));
+        
+        if (role === 'admin') {
+            window.location.href = '/admin/dashboard';
+        } else {
+            window.location.href = '/';
+        }
     };
 
     return (

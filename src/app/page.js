@@ -1,45 +1,36 @@
 'use client';
 import ProductCard from '@/components/ProductCard';
-import StoreCard from '@/components/StoreCard';
 import { useState, useEffect, Suspense, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 const RADIUS_OPTIONS = [1, 3, 5, 10, 20];
 
-function HomeContent() {
-  const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
+const ChefHatIcon = () => (
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--primary-dark)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, backgroundColor: 'white', padding: '6px', borderRadius: '50%', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+    <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z"/>
+    <line x1="6" y1="17" x2="18" y2="17"/>
+  </svg>
+);
 
+function HomeContent() {
   const [currentLocationName, setCurrentLocationName] = useState('위치 파악 중...');
-  const [nearbyStoreList, setNearbyStoreList] = useState([]);
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [storeRadius, setStoreRadius] = useState(5);
+  const [role, setRole] = useState('user');
   const [productRadius, setProductRadius] = useState(10);
   const [userCoords, setUserCoords] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showHeartPopup, setShowHeartPopup] = useState(false);
 
   const categories = [
     { id: 'all', name: '전체', icon: '🛒' },
-    { id: 'meat', name: '정육·계란', icon: '🥩' },
-    { id: 'vegetable', name: '채소·과일', icon: '🥬' },
-    { id: 'seafood', name: '수산·건어물', icon: '🐟' },
-    { id: 'dairy', name: '유제품·간편', icon: '🥛' },
+    { id: 'mart', name: '마트', icon: '🏪' },
+    { id: 'restaurant', name: '음식점', icon: '🍽️' },
     { id: 'bakery', name: '베이커리', icon: '🍞' },
+    { id: 'meat', name: '정육', icon: '🥩' },
+    { id: 'vegetable', name: '채소', icon: '🥬' },
+    { id: 'seafood', name: '수산', icon: '🐟' },
+    { id: 'dairy', name: '유제', icon: '🥛' },
   ];
-
-  // 매장 데이터만 다시 가져오기
-  const fetchStores = useCallback(async (lat, lng, radius) => {
-    try {
-      const res = await fetch(`/api/stores/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
-      if (res.ok) {
-        const stores = await res.json();
-        setNearbyStoreList(stores);
-      }
-    } catch (e) {
-      console.error('매장 로딩 실패:', e);
-    }
-  }, []);
 
   // 상품 데이터만 다시 가져오기
   const fetchProducts = useCallback(async (lat, lng, radius, category) => {
@@ -59,11 +50,28 @@ function HomeContent() {
   useEffect(() => {
     const fetchAll = async (lat, lng) => {
       try {
+        const userStr = localStorage.getItem('user');
+        let currentRole = 'user';
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                if (user.role) {
+                    currentRole = user.role;
+                    setRole(user.role);
+                }
+            } catch (e) {}
+        }
+
+        // If admin, redirect instead of loading heavy components
+        if (currentRole === 'admin') {
+            window.location.href = '/admin/dashboard';
+            return;
+        }
+
         setUserCoords({ lat, lng });
 
-        const [geocodeRes, storesRes, productsRes] = await Promise.all([
+        const [geocodeRes, productsRes] = await Promise.all([
           fetch(`/api/geocode?lat=${lat}&lng=${lng}`),
-          fetch(`/api/stores/nearby?lat=${lat}&lng=${lng}&radius=${storeRadius}`),
           fetch(`/api/products/nearby?lat=${lat}&lng=${lng}&radius=${productRadius}`)
         ]);
 
@@ -71,7 +79,6 @@ function HomeContent() {
           const geoData = await geocodeRes.json();
           setCurrentLocationName(geoData.locationName || '알 수 없는 위치');
         }
-        if (storesRes.ok) setNearbyStoreList(await storesRes.json());
         if (productsRes.ok) setRecommendedProducts(await productsRes.json());
       } catch (error) {
         console.error('데이터 로딩 실패:', error);
@@ -94,14 +101,6 @@ function HomeContent() {
       fetchAll(37.4979, 127.0276);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 매장 반경 변경 시
-  const handleStoreRadiusChange = (radius) => {
-    setStoreRadius(radius);
-    if (userCoords) {
-      fetchStores(userCoords.lat, userCoords.lng, radius);
-    }
-  };
 
   // 상품 반경 변경 시
   const handleProductRadiusChange = (radius) => {
@@ -127,178 +126,128 @@ function HomeContent() {
     );
   }
 
-  // 음식점 떨이 탭
-  if (tabParam === 'restaurant') {
-    return (
-      <main className="page-content">
-        <div style={{ padding: '16px 16px 0' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)' }}>🍽️ 내 주변 음식점 떨이</h2>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{currentLocationName} 기준</span>
-          </div>
-          {/* 상품 반경 선택 */}
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            {RADIUS_OPTIONS.map(r => (
-              <button
-                key={`pr-${r}`}
-                onClick={() => handleProductRadiusChange(r)}
-                style={{
-                  padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: '600',
-                  cursor: 'pointer', transition: 'all 0.2s', border: '1.5px solid',
-                  borderColor: productRadius === r ? 'var(--primary)' : '#e0e0e0',
-                  backgroundColor: productRadius === r ? 'var(--primary)' : '#fff',
-                  color: productRadius === r ? '#fff' : 'var(--text-secondary)',
-                }}
-              >
-                {r}km
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {recommendedProducts.filter(p => p.storeType === 'restaurant').length > 0 ? (
-          <div className="product-grid mb-xl" style={{ marginTop: '0' }}>
-            {recommendedProducts.filter(p => p.storeType === 'restaurant').map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state" style={{ marginTop: '20px', marginBottom: '40px' }}>
-            <div className="emoji">🍽️</div>
-            <h2 className="title">내 주변에 음식점 떨이가 없어요</h2>
-            <p className="desc">반경 {productRadius}km 이내에 등록된 음식점 할인 상품이 없습니다.</p>
-          </div>
-        )}
-      </main>
-    );
+  // 관리자 일 경우, 리다이렉트 전 렌더링 방지
+  if (role === 'admin') {
+      return null;
   }
 
-  // 이벤트 탭
-  if (tabParam === 'event') {
-    return (
-      <main className="page-content">
-        <div className="empty-state" style={{ marginTop: '80px' }}>
-          <div className="emoji">🎉</div>
-          <h2 className="title">이벤트 준비 중!</h2>
-          <p className="desc">알뜰한 이벤트 소식을 기대해주세요.</p>
-        </div>
-      </main>
-    );
+  // 사장님 뷰
+  if (role === 'manager') {
+      return (
+        <main className="page-content" style={{ padding: 'var(--space-md)' }}>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
+                가게 현황 (내 스토어)
+            </h1>
+            <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', marginBottom: '16px' }}>
+                <div className="emoji" style={{ fontSize: '2rem', marginBottom: '8px' }}>👨‍🍳</div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '8px' }}>안녕하세요 사장님!</h3>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    마감 시간에 버려질 위기에 처한 맛있는 음식들을 등록해서 판매해보세요.
+                </p>
+            </div>
+
+            <div className="btn-support-wrapper">
+                <button className="btn-support" onClick={() => window.location.href='/admin/product/new'}>
+                    마감 상품 등록하기
+                </button>
+            </div>
+        </main>
+      );
   }
 
-  // 기본: 마트떨이 탭
+  const handleSupportClick = () => {
+    setShowHeartPopup(true);
+    setTimeout(() => setShowHeartPopup(false), 2000);
+  };
+
   return (
-    <main className="page-content">
+    <main className="page-content" style={{ position: 'relative' }}>
+      {/* Hero Section */}
+      <div style={{ padding: 'var(--space-md) var(--space-md) 0' }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: 'var(--space-md)', color: 'var(--text-primary)' }}>
+          내 주변 마감 떨이
+        </h1>
+        <div className="hero-bubble">
+          <ChefHatIcon />
+          <div className="hero-bubble-text">
+            <p style={{ fontWeight: '700', fontSize: '0.95rem', color: '#111', marginBottom: '4px' }}>
+              오늘도 정성껏 만들었지만, 버려질 위기에 처했어요.
+            </p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              - 동네 사장님들 드림
+            </p>
+          </div>
+        </div>
+      </div>
 
-      {/* 카테고리 네비게이션 */}
-      <div style={{
-        display: 'flex', overflowX: 'auto', gap: '8px', padding: '16px', borderBottom: '1px solid #eee',
-        msOverflowStyle: 'none', scrollbarWidth: 'none'
-      }}>
-        {categories.map(cat => (
+      {/* Distance Filter */}
+      <div className="distance-filter">
+        {RADIUS_OPTIONS.map(r => (
           <button
-            key={cat.id}
-            onClick={() => handleCategoryChange(cat.id)}
-            style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px',
-              padding: '8px 4px', borderRadius: '12px', flexShrink: 0,
-              backgroundColor: selectedCategory === cat.id ? 'var(--primary-glow)' : 'transparent',
-              border: selectedCategory === cat.id ? '1px solid var(--primary)' : '1px solid transparent',
-              transition: 'all 0.2s',
-            }}
+            key={`dist-${r}`}
+            onClick={() => handleProductRadiusChange(r)}
+            className={`distance-btn ${productRadius === r ? 'active' : ''}`}
           >
-            <span style={{ fontSize: '1.5rem', marginBottom: '4px' }}>{cat.icon}</span>
-            <span style={{
-              fontSize: '0.75rem',
-              fontWeight: selectedCategory === cat.id ? '700' : '500',
-              color: selectedCategory === cat.id ? 'var(--primary)' : 'var(--text-secondary)'
-            }}>
-              {cat.name}
-            </span>
+            {r}km
           </button>
         ))}
       </div>
 
-      {/* 상품 섹션 */}
-      <div style={{ padding: '16px 16px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)' }}>🛒 내 주변 할인 상품</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{currentLocationName} 기준</span>
-        </div>
-        {/* 상품 반경 선택 */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          {RADIUS_OPTIONS.map(r => (
-            <button
-              key={`p-${r}`}
-              onClick={() => handleProductRadiusChange(r)}
-              style={{
-                padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: '600',
-                cursor: 'pointer', transition: 'all 0.2s', border: '1.5px solid',
-                borderColor: productRadius === r ? 'var(--primary)' : '#e0e0e0',
-                backgroundColor: productRadius === r ? 'var(--primary)' : '#fff',
-                color: productRadius === r ? '#fff' : 'var(--text-secondary)',
-              }}
-            >
-              {r}km
-            </button>
-          ))}
-        </div>
+      {/* Category Filter */}
+      <div className="category-filter">
+        {categories.map(cat => (
+          <div
+            key={cat.id}
+            onClick={() => handleCategoryChange(cat.id)}
+            className={`category-item ${selectedCategory === cat.id ? 'active' : ''}`}
+          >
+            <div className="category-icon">{cat.icon}</div>
+            <span className="category-text">{cat.name}</span>
+          </div>
+        ))}
       </div>
 
+      {/* Product Feed */}
       {recommendedProducts.length > 0 ? (
-        <div className="product-grid mb-xl" style={{ marginTop: '0' }}>
+        <div className="product-grid mb-xl" style={{ marginTop: 'var(--space-md)' }}>
           {recommendedProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard key={product.id} product={{
+               ...product, 
+               name: `정성 가득 ${product.name}`, 
+               distance: productRadius > 1 ? Math.floor(Math.random() * productRadius) + 1 : 1 
+            }} />
           ))}
         </div>
       ) : (
         <div className="empty-state" style={{ marginTop: '20px', marginBottom: '40px' }}>
           <div className="emoji">🛒</div>
-          <h2 className="title">내 주변에 할인 상품이 없어요</h2>
-          <p className="desc">반경 {productRadius}km 이내에 등록된 할인 상품이 없습니다.</p>
+          <h2 className="title">내 주변에 마감 떨이가 없어요</h2>
+          <p className="desc">반경 {productRadius}km 이내에 등록된 상품이 없습니다.</p>
         </div>
       )}
 
-      {/* 내 주변 마트 섹션 */}
-      <div className="section" style={{ padding: '0 16px', marginBottom: '40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)' }}>📍 내 주변 마트</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{currentLocationName} 기준</span>
-        </div>
-
-        {/* 마트 반경 선택 */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '16px', flexWrap: 'wrap' }}>
-          {RADIUS_OPTIONS.map(r => (
-            <button
-              key={`s-${r}`}
-              onClick={() => handleStoreRadiusChange(r)}
-              style={{
-                padding: '6px 14px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: '600',
-                cursor: 'pointer', transition: 'all 0.2s', border: '1.5px solid',
-                borderColor: storeRadius === r ? 'var(--primary)' : '#e0e0e0',
-                backgroundColor: storeRadius === r ? 'var(--primary)' : '#fff',
-                color: storeRadius === r ? '#fff' : 'var(--text-secondary)',
-              }}
-            >
-              {r}km
-            </button>
-          ))}
-        </div>
-
-        {nearbyStoreList.length > 0 ? (
-          <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-            {nearbyStoreList.map((store) => (
-              <div key={store.id} style={{ minWidth: '240px', flexShrink: 0 }}>
-                <StoreCard store={store} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            반경 {storeRadius}km 이내에 등록된 마트가 없습니다.
-          </div>
-        )}
+      {/* Main CTA */}
+      <div className="btn-support-wrapper">
+        <button className="btn-support" onClick={handleSupportClick}>
+          사장님 응원하기
+        </button>
       </div>
+
+      {/* Heart Popup */}
+      {showHeartPopup && (
+        <div style={{
+          position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          background: 'rgba(255, 255, 255, 0.95)', padding: '24px 32px', borderRadius: '16px',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)', zIndex: 1000,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{ fontSize: '3rem', animation: 'pulse 1s infinite' }}>💛</div>
+          <div style={{ fontWeight: '700', color: '#111', textAlign: 'center', lineHeight: '1.4' }}>
+            사장님에게 응원 메시지가<br/>전달되었습니다!
+          </div>
+        </div>
+      )}
     </main>
   );
 }
