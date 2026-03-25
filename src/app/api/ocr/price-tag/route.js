@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { requireRole } from '@/lib/authServer';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export async function POST(request) {
+    const { error: authError, status } = await requireRole(request, ['manager', 'store_manager', 'admin']);
+    if (authError) return NextResponse.json({ error: authError }, { status });
+
     console.log('>>> [OCR API] 가격표 인식 요청 수신');
 
     try {

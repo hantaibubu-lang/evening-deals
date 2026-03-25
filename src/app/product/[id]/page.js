@@ -1,22 +1,39 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { fetchWithAuth } from '@/utils/apiAuth';
+import { useToast } from '@/components/Toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeStock } from '@/hooks/useRealtimeProducts';
 
 export default function ProductDetail({ params }) {
-    const productId = params?.id || 'p1';
+    const { id } = use(params);
+    const productId = id || 'p1';
     const router = useRouter();
+    const { showToast } = useToast();
+    const { isAuthenticated } = useAuth();
     const [product, setProduct] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isFavorite, setIsFavorite] = useState(false);
-    const userId = '7c6f108c-9c9e-4c7e-8d5f-e6a6a6a6a6a6'; // MVP Admin ID
+    const [activeTab, setActiveTab] = useState('description');
+    const [quantity, setQuantity] = useState(1);
+
+    // 실시간 재고 구독
+    useRealtimeStock(productId, ({ quantity: newQty, status: newStatus }) => {
+        setProduct(prev => prev ? { ...prev, quantity: newQty, status: newStatus } : prev);
+        if (newStatus === 'sold_out') {
+            showToast('이 상품이 방금 품절되었습니다.', 'warning');
+        }
+    });
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const [productRes, favoritesRes] = await Promise.all([
-                    fetch(`/api/products/${productId}`),
-                    fetch(`/api/users/favorites`)
+                    fetchWithAuth(`/api/products/${productId}`),
+                    fetchWithAuth(`/api/users/favorites`)
                 ]);
 
                 if (productRes.ok) {
@@ -39,10 +56,20 @@ export default function ProductDetail({ params }) {
     }, [productId]);
 
     const handleFavoriteToggle = async () => {
+        if (!isAuthenticated) {
+            showToast('로그인이 필요합니다.', 'error');
+            router.push('/login');
+            return;
+        }
+
+        // Optimistic UI: 먼저 UI를 즉각적으로 변경
+        const previousState = isFavorite;
+        setIsFavorite(!previousState);
+
         try {
-            const method = isFavorite ? 'DELETE' : 'POST';
-            const url = isFavorite
-                ? `/api/users/favorites?userId=${userId}&targetId=${productId}&type=PRODUCT`
+            const method = previousState ? 'DELETE' : 'POST';
+            const url = previousState
+                ? `/api/users/favorites?targetId=${productId}&type=PRODUCT`
                 : '/api/users/favorites';
 
             const options = {
@@ -50,52 +77,60 @@ export default function ProductDetail({ params }) {
                 headers: { 'Content-Type': 'application/json' }
             };
 
-            if (!isFavorite) {
-                options.body = JSON.stringify({ userId, targetId: productId, type: 'PRODUCT' });
+            if (!previousState) {
+                options.body = JSON.stringify({ targetId: productId, type: 'PRODUCT' });
             }
 
-            const res = await fetch(url, options);
-            if (res.ok) {
-                setIsFavorite(!isFavorite);
-                alert(isFavorite ? '찜 목록에서 삭제되었습니다.' : '찜 목록에 추가되었습니다!');
+            const res = await fetchWithAuth(url, options);
+            if (!res.ok) {
+                throw new Error('API failed');
             }
+            showToast(previousState ? '찜 목록에서 삭제되었습니다.' : '찜 목록에 추가되었습니다!');
         } catch (error) {
             console.error("찜 처리 중 오류:", error);
+            // 실패 시 원래 상태로 롤백 (Rollback)
+            setIsFavorite(previousState);
+            showToast('네트워크 오류가 발생했습니다. 다시 시도해주세요.', 'error');
         }
     };
 
-    const handleReservation = async () => {
+    const handleShare = async () => {
+        const shareData = {
+            title: `${product.name} - 저녁떨이`,
+            text: `${product.discountRate}% 할인! ${product.discountPrice?.toLocaleString()}원에 만나보세요.`,
+            url: window.location.href,
+        };
         try {
-            setIsLoading(true);
-            // MVP용 유저 ID 가져오기 (admin 계정 기준)
-            const userRes = await fetch('/api/users/orders'); // 기존 orders API에서 유저 ID 로직을 참고하여 임시 처리
-            // 실제 서비스에서는 세션에서 가져와야 함. 여기서는 데모를 위해 고정된 로직 사용
-
-            const res = await fetch('/api/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: userId,
-                    productId: product.id,
-                    storeId: product.storeId,
-                    quantity: 1,
-                    totalPrice: product.discountPrice
-                })
-            });
-
-            if (res.ok) {
-                alert('픽업 예약이 완료되었습니다. 마이페이지에서 주문 내역을 확인하세요.');
-                router.push('/history');
+            if (navigator.share) {
+                await navigator.share(shareData);
             } else {
-                const errorData = await res.json();
-                alert(`예약 실패: ${errorData.error || '알 수 없는 오류'}`);
+                await navigator.clipboard.writeText(window.location.href);
+                showToast('링크가 복사되었습니다!', 'info');
             }
-        } catch (error) {
-            console.error("예약 중 오류 발생:", error);
-            alert('예약 처리 중 서버 오류가 발생했습니다.');
-        } finally {
-            setIsLoading(false);
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                await navigator.clipboard.writeText(window.location.href);
+                showToast('링크가 복사되었습니다!', 'info');
+            }
         }
+    };
+
+    const handleReservation = () => {
+        if (!isAuthenticated) {
+            showToast('로그인이 필요합니다.', 'error');
+            router.push('/login');
+            return;
+        }
+        router.push(`/checkout/${product.id}?quantity=${quantity}`);
+    };
+
+    const handleQuantityChange = (delta) => {
+        setQuantity(prev => {
+            const newQ = prev + delta;
+            if (newQ < 1) return 1;
+            if (newQ > (product.stock || product.quantity || 99)) return product.stock || product.quantity || 99;
+            return newQ;
+        });
     };
 
     if (isLoading) {
@@ -126,8 +161,9 @@ export default function ProductDetail({ params }) {
                 </Link>
                 <h1 style={{ fontSize: '1.1rem', fontWeight: 'bold', margin: 0 }}>상품 상세</h1>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>🔍</span>
-                    <span style={{ fontSize: '1.2rem' }}>🏠</span>
+                    <span onClick={handleShare} style={{ fontSize: '1.2rem', cursor: 'pointer' }}>📤</span>
+                    <span onClick={() => router.push('/search')} style={{ fontSize: '1.2rem', cursor: 'pointer' }}>🔍</span>
+                    <span onClick={() => router.push('/')} style={{ fontSize: '1.2rem', cursor: 'pointer' }}>🏠</span>
                 </div>
             </header>
 
@@ -137,8 +173,10 @@ export default function ProductDetail({ params }) {
             {/* 스토어 정보 (간단히) */}
             <div style={{ padding: '16px', borderBottom: '8px solid #f8f9fa' }}>
                 <Link href={`/store/${product.storeId}`} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: 'inherit', textDecoration: 'none' }}>
-                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>🏪</div>
-                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{product.storeName} &gt;</span>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>{product.storeEmoji || '🏪'}</div>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{product.storeName}</span>
+                    {product.rating > 0 && <span style={{ fontSize: '0.8rem', color: '#999' }}>⭐ {product.rating}</span>}
+                    <span style={{ fontSize: '0.8rem', color: '#999' }}>&gt;</span>
                 </Link>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '8px' }}>{product.name}</h2>
 
@@ -150,22 +188,126 @@ export default function ProductDetail({ params }) {
 
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                     <span style={{ padding: '4px 8px', backgroundColor: '#f0f0f0', borderRadius: '4px', fontSize: '0.75rem', color: '#666' }}>유통기한: {product.expiresDate}</span>
-                    <span style={{ padding: '4px 8px', backgroundColor: '#fff0f0', color: 'var(--primary)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>재고 {product.stock}개</span>
+                    <span style={{ padding: '4px 8px', backgroundColor: '#fff0f0', color: 'var(--primary)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>재고 {product.stock || product.quantity}개</span>
+                </div>
+
+                {/* 수량 선택기 */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#333' }}>구매 수량</span>
+                    <div style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+                        <button onClick={() => handleQuantityChange(-1)} style={{ padding: '8px 12px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: quantity <= 1 ? '#ccc' : '#333' }}>-</button>
+                        <span style={{ padding: '0 12px', fontWeight: 'bold', borderLeft: '1px solid #ddd', borderRight: '1px solid #ddd', minWidth: '40px', textAlign: 'center' }}>{quantity}</span>
+                        <button onClick={() => handleQuantityChange(1)} style={{ padding: '8px 12px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem', color: quantity >= (product.stock || product.quantity) ? '#ccc' : '#333' }}>+</button>
+                    </div>
                 </div>
             </div>
 
             {/* 탭 */}
             <div style={{ display: 'flex', borderBottom: '1px solid #eee' }}>
-                <div style={{ flex: 1, textAlign: 'center', padding: '12px', borderBottom: '2px solid var(--text-primary)', fontWeight: 'bold' }}>상품설명</div>
-                <div style={{ flex: 1, textAlign: 'center', padding: '12px', color: '#666' }}>리뷰(3)</div>
-                <div style={{ flex: 1, textAlign: 'center', padding: '12px', color: '#666' }}>문의</div>
+                {[
+                    { key: 'description', label: '상품설명' },
+                    { key: 'reviews', label: `리뷰(${product.reviewCount || 0})` },
+                    { key: 'related', label: '이 매장 다른 상품' },
+                ].map(tab => (
+                    <div key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ flex: 1, textAlign: 'center', padding: '12px', borderBottom: activeTab === tab.key ? '2px solid var(--text-primary)' : 'none', fontWeight: activeTab === tab.key ? 'bold' : 'normal', color: activeTab === tab.key ? 'inherit' : '#666', cursor: 'pointer', fontSize: '0.9rem' }}>
+                        {tab.label}
+                    </div>
+                ))}
             </div>
 
             <div style={{ padding: '24px 16px', minHeight: '300px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '12px' }}>상품 상세 정보</h3>
-                <p style={{ color: '#444', lineHeight: '1.6', fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>
-                    {product.description}
-                </p>
+                {activeTab === 'description' && (
+                    <>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '12px' }}>상품 상세 정보</h3>
+                        <p style={{ color: '#444', lineHeight: '1.6', fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>
+                            {product.description}
+                        </p>
+                        {product.storeAddress && (
+                            <div style={{ marginTop: '20px', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#666' }}>픽업 장소: {product.storeAddress}</span>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'reviews' && (
+                    <div>
+                        {/* 평점 요약 */}
+                        {product.reviewCount > 0 && (
+                            <div style={{ textAlign: 'center', padding: '16px 0', marginBottom: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                                <div style={{ fontSize: '2.5rem', fontWeight: '900', color: 'var(--primary)' }}>{product.rating || 0}</div>
+                                <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>
+                                    {Array.from({ length: 5 }, (_, i) => (
+                                        <span key={i} style={{ color: i < Math.round(product.rating || 0) ? '#FFB800' : '#ddd' }}>★</span>
+                                    ))}
+                                </div>
+                                <div style={{ fontSize: '0.85rem', color: '#999' }}>리뷰 {product.reviewCount}개</div>
+                            </div>
+                        )}
+
+                        {product.reviews && product.reviews.length > 0 ? (
+                            product.reviews.map(r => (
+                                <div key={r.id} style={{ paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                        <div>
+                                            <span style={{ fontWeight: '600', fontSize: '0.9rem', marginRight: '8px' }}>{r.userName}</span>
+                                            <span style={{ fontSize: '0.85rem' }}>
+                                                {Array.from({ length: 5 }, (_, i) => (
+                                                    <span key={i} style={{ color: i < Math.round(r.rating) ? '#FFB800' : '#ddd' }}>★</span>
+                                                ))}
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '0.75rem', color: '#999' }}>{new Date(r.createdAt).toLocaleDateString('ko-KR')}</span>
+                                    </div>
+                                    {r.content && <p style={{ fontSize: '0.9rem', lineHeight: '1.5', color: '#333', marginBottom: '8px' }}>{r.content}</p>}
+                                    {r.imageUrl && (
+                                        <div style={{ position: 'relative', width: '100%', height: '180px', borderRadius: '8px', overflow: 'hidden' }}>
+                                            <Image src={r.imageUrl} alt="리뷰 사진" fill sizes="(max-width: 480px) 100vw, 600px" style={{ objectFit: 'cover' }} />
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💬</div>
+                                <p>아직 등록된 리뷰가 없습니다.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'related' && (
+                    <div>
+                        {product.relatedProducts && product.relatedProducts.length > 0 ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                                {product.relatedProducts.map(p => (
+                                    <Link href={`/product/${p.id}`} key={p.id} style={{ color: 'inherit', textDecoration: 'none', borderRadius: '12px', overflow: 'hidden', border: '1px solid #eee' }}>
+                                        <div style={{ width: '100%', height: '120px', backgroundColor: '#f5f5f5', backgroundImage: p.imageUrl ? `url('${p.imageUrl}')` : 'none', backgroundSize: 'cover', backgroundPosition: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            {!p.imageUrl && <span style={{ fontSize: '2.5rem' }}>🛍️</span>}
+                                        </div>
+                                        <div style={{ padding: '10px' }}>
+                                            <h4 style={{ fontSize: '0.85rem', fontWeight: '500', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</h4>
+                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                                                <span style={{ fontWeight: 'bold', color: 'var(--primary)', fontSize: '0.85rem' }}>{p.discountRate}%</span>
+                                                <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{(p.discountPrice || 0).toLocaleString()}원</span>
+                                            </div>
+                                            {p.quantity !== undefined && p.quantity <= 3 && (
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>
+                                                    {p.quantity <= 0 ? '품절' : `남은 ${p.quantity}개`}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ textAlign: 'center', padding: '40px 0', color: '#999' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '16px' }}>📦</div>
+                                <p>이 매장의 다른 할인 상품이 없습니다.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* 하단 구매 플로팅 바 */}
@@ -190,7 +332,7 @@ export default function ProductDetail({ params }) {
                     {isFavorite ? '❤️' : '🤍'}
                 </button>
                 <button onClick={handleReservation} style={{ flex: 1, height: '48px', borderRadius: '8px', backgroundColor: 'var(--primary)', color: '#fff', fontSize: '1.05rem', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}>
-                    픽업 예약하기
+                    {((product.discountPrice || product.discount_price || 0) * quantity).toLocaleString()}원 구매하기
                 </button>
             </div>
         </main>

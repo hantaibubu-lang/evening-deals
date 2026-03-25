@@ -1,20 +1,75 @@
 'use client';
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import { fetchWithAuth } from '@/utils/apiAuth';
+import { useToast } from '@/components/Toast';
+
+const STATUS_LABELS = {
+    PENDING: '결제 완료',
+    READY_FOR_PICKUP: '픽업 대기중',
+    COMPLETED: '픽업 완료',
+    CANCELLED: '취소됨',
+};
 
 export default function OrderDetail({ params }) {
     const { id } = use(params);
     const [isLoading, setIsLoading] = useState(true);
-    const [isPickedUp, setIsPickedUp] = useState(false);
+    const [order, setOrder] = useState(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
-        // Mock data loading
-        setTimeout(() => setIsLoading(false), 600);
-    }, []);
+        async function fetchOrder() {
+            try {
+                const res = await fetchWithAuth('/api/stores/orders');
+                if (!res.ok) throw new Error('주문 정보를 불러오지 못했습니다.');
+                const orders = await res.json();
+                const found = orders.find(o => o.id === id);
+                if (!found) throw new Error('주문을 찾을 수 없습니다.');
+                setOrder(found);
+            } catch (e) {
+                showToast(e.message, 'error');
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchOrder();
+    }, [id]);
 
-    const handlePickupComplete = () => {
-        setIsPickedUp(true);
-        // Play success sound or animation
+    const handleStatusChange = async (newStatus) => {
+        if (isUpdating) return;
+        setIsUpdating(true);
+        try {
+            const res = await fetchWithAuth('/api/stores/orders', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: id, status: newStatus }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || '상태 변경에 실패했습니다.');
+            }
+            setOrder(prev => ({ ...prev, status: newStatus }));
+            showToast(
+                newStatus === 'COMPLETED' ? '픽업 확인 완료!' :
+                newStatus === 'READY_FOR_PICKUP' ? '픽업 대기 상태로 변경되었습니다.' :
+                newStatus === 'CANCELLED' ? '주문이 취소되었습니다.' : '상태가 변경되었습니다.',
+                newStatus === 'CANCELLED' ? 'error' : 'success'
+            );
+        } catch (e) {
+            showToast(e.message, 'error');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const getMinutesUntilExpiry = (dateStr) => {
+        if (!dateStr) return null;
+        const diff = new Date(dateStr) - new Date();
+        const minutes = Math.floor(diff / 60000);
+        if (minutes < 0) return '만료됨';
+        if (minutes < 60) return `픽업 ${minutes}분 전`;
+        return `픽업 ${Math.floor(minutes / 60)}시간 전`;
     };
 
     if (isLoading) {
@@ -25,6 +80,20 @@ export default function OrderDetail({ params }) {
         );
     }
 
+    if (!order) {
+        return (
+            <main className="page-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', gap: '16px' }}>
+                <div style={{ fontSize: '3rem' }}>📭</div>
+                <p style={{ color: 'var(--text-muted)', fontWeight: '600' }}>주문을 찾을 수 없습니다.</p>
+                <Link href="/" style={{ color: 'var(--primary)', fontWeight: '700' }}>홈으로 돌아가기</Link>
+            </main>
+        );
+    }
+
+    const urgency = getMinutesUntilExpiry(order.date);
+    const isCancelled = order.status === 'CANCELLED';
+    const isCompleted = order.status === 'COMPLETED';
+
     return (
         <main className="page-content" style={{ padding: '0', backgroundColor: '#F9FAFB', minHeight: '100vh', paddingBottom: '100px' }}>
             {/* Header */}
@@ -33,58 +102,54 @@ export default function OrderDetail({ params }) {
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 </Link>
                 <h1 style={{ fontSize: '1.2rem', fontWeight: '800' }}>주문 상세</h1>
-                <span style={{ marginLeft: 'auto', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>주문 ID: {id}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.85rem', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-secondary)', padding: '4px 8px', borderRadius: '8px' }}>
+                    {STATUS_LABELS[order.status] || order.status}
+                </span>
             </header>
 
             <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                
-                {/* Customer Profile (Warm Connection) */}
+
+                {/* Customer Info */}
                 <div className="bubble-card fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                         <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', boxShadow: 'var(--shadow-sm)' }}>
                             <span style={{ fontSize: '2rem' }}>🧑‍🦱</span>
                         </div>
                         <div style={{ textAlign: 'left' }}>
-                            <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--text-primary)' }}>김단골<span style={{ fontWeight: '400' }}>님</span></div>
-                            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>(dan-gol@kaka.o.kr)</div>
+                            <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                {order.customerName}<span style={{ fontWeight: '400' }}>님</span>
+                            </div>
+                            {order.customerEmail && (
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{order.customerEmail}</div>
+                            )}
                         </div>
                     </div>
-                    {/* Urgency Badge */}
-                    <div className="badge-urgency">
-                        픽업 1시간 전
-                    </div>
+                    {urgency && !isCancelled && !isCompleted && (
+                        <div className="badge-urgency">{urgency}</div>
+                    )}
                 </div>
 
                 {/* Order Items */}
                 <div>
                     <h2 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '12px', paddingLeft: '4px' }}>주문 상품</h2>
                     <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', boxShadow: 'var(--shadow-sm)' }}>
-                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px', marginBottom: '16px' }}>
-                            {/* Product Image Mock */}
-                            <div style={{ width: '80px', height: '80px', borderRadius: '8px', backgroundColor: '#FFEBEB', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-                                <span style={{ fontSize: '2.5rem' }}>🍎</span>
-                                <div style={{ position: 'absolute', top: '-6px', left: '-6px', backgroundColor: 'var(--primary)', color: 'white', fontSize: '0.7rem', fontWeight: '800', padding: '4px 6px', borderRadius: '4px', transform: 'rotate(-5deg)' }}>
-                                    50%
-                                </div>
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '4px' }}>신선한 사과 2개</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)', fontSize: '0.9rem' }}>10,000원</span>
-                                    <span style={{ color: '#E53E3E', fontWeight: '800', fontSize: '1.2rem' }}>5,000<span style={{ fontSize: '1rem' }}>원</span></span>
-                                </div>
-                            </div>
-                        </div>
-
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                            <div style={{ width: '80px', height: '80px', borderRadius: '8px', backgroundColor: '#EBF8FF', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                <span style={{ fontSize: '2.5rem' }}>🥛</span>
+                            <div style={{ width: '80px', height: '80px', borderRadius: '8px', backgroundColor: '#FFEBEB', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+                                {order.imageUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={order.imageUrl} alt={order.productName || '상품'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <span style={{ fontSize: '2.5rem' }}>🛍️</span>
+                                )}
                             </div>
                             <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '4px' }}>맛있는 우유 1개</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '4px' }}>
+                                    {order.productName || '상품'} {order.quantity > 1 ? `${order.quantity}개` : ''}
+                                </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <span style={{ textDecoration: 'line-through', color: 'var(--text-muted)', fontSize: '0.9rem' }}>2,500원</span>
-                                    <span style={{ color: '#E53E3E', fontWeight: '800', fontSize: '1.2rem' }}>1,500<span style={{ fontSize: '1rem' }}>원</span></span>
+                                    <span style={{ color: '#E53E3E', fontWeight: '800', fontSize: '1.2rem' }}>
+                                        {(order.totalPrice || 0).toLocaleString()}<span style={{ fontSize: '1rem' }}>원</span>
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -94,32 +159,71 @@ export default function OrderDetail({ params }) {
                 {/* Payment Summary */}
                 <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: 'var(--shadow-sm)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '1.1rem', fontWeight: '700' }}>
-                        <span>결제 가격</span>
-                        <span style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>12,500원</span>
-                            <span style={{ color: '#E53E3E', fontSize: '1.5rem', fontWeight: '900' }}>6,500원</span>
+                        <span>결제 금액</span>
+                        <span style={{ color: '#E53E3E', fontSize: '1.5rem', fontWeight: '900' }}>
+                            {(order.totalPrice || 0).toLocaleString()}원
                         </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                        <span>결제 방법</span>
-                        <span style={{ fontWeight: '500' }}>현장 결제 (예약금 없음)</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        <span>주문 ID</span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{order.id}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '8px' }}>
+                        <span>주문 일시</span>
+                        <span>{new Date(order.date).toLocaleString('ko-KR')}</span>
                     </div>
                 </div>
 
             </div>
 
-            {/* Main CTA */}
-            <div className="btn-support-wrapper fade-in">
-                {isPickedUp ? (
-                    <button className="btn-support" style={{ backgroundColor: '#28A745', transform: 'scale(0.98)' }} disabled>
-                        <span style={{ marginRight: '8px' }}>✅</span> 픽업 확인 완료!
+            {/* Action Buttons */}
+            {!isCancelled && !isCompleted && (
+                <div className="btn-support-wrapper fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '0 16px 16px' }}>
+                    {order.status === 'PENDING' && (
+                        <button
+                            className="btn-support"
+                            onClick={() => handleStatusChange('READY_FOR_PICKUP')}
+                            disabled={isUpdating}
+                            style={{ backgroundColor: 'var(--primary)' }}
+                        >
+                            {isUpdating ? '처리 중...' : '🔔 픽업 준비 완료 알림'}
+                        </button>
+                    )}
+                    {order.status === 'READY_FOR_PICKUP' && (
+                        <button
+                            className="btn-support"
+                            onClick={() => handleStatusChange('COMPLETED')}
+                            disabled={isUpdating}
+                            style={{ backgroundColor: '#28A745' }}
+                        >
+                            {isUpdating ? '처리 중...' : '✅ 픽업 확인 완료'}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => handleStatusChange('CANCELLED')}
+                        disabled={isUpdating}
+                        style={{ width: '100%', padding: '12px', background: 'none', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', color: 'var(--danger)', fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem' }}
+                    >
+                        주문 취소
                     </button>
-                ) : (
-                    <button className="btn-support" onClick={handlePickupComplete}>
-                        픽업 완료 확인
+                </div>
+            )}
+
+            {isCompleted && (
+                <div className="btn-support-wrapper fade-in">
+                    <button className="btn-support" style={{ backgroundColor: '#28A745' }} disabled>
+                        <span style={{ marginRight: '8px' }}>✅</span> 픽업 확인 완료
                     </button>
-                )}
-            </div>
+                </div>
+            )}
+
+            {isCancelled && (
+                <div className="btn-support-wrapper fade-in">
+                    <div style={{ textAlign: 'center', padding: '16px', color: 'var(--danger)', fontWeight: '600' }}>
+                        취소된 주문입니다
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

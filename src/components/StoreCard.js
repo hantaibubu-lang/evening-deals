@@ -1,9 +1,10 @@
 'use client';
+import { memo } from 'react';
 import Link from 'next/link';
 
-export default function StoreCard({ store }) {
+export default memo(function StoreCard({ store }) {
     return (
-        <Link href={`/store/${store.id}`} className="store-card animate-fade-in" style={{ display: 'flex', textDecoration: 'none', color: 'inherit' }}>
+        <Link href={`/store/${store.id}`} aria-label={`${store.name}, 할인상품 ${store.dealCount || 0}개${store.distance ? `, ${store.distance}` : ''}`} className="store-card animate-fade-in" style={{ display: 'flex', textDecoration: 'none', color: 'inherit' }}>
             <div className="store-card-avatar">
                 {store.emoji || '🏪'}
             </div>
@@ -20,4 +21,4 @@ export default function StoreCard({ store }) {
             </div>
         </Link>
     );
-}
+})

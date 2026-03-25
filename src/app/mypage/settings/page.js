@@ -1,10 +1,31 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function AppSettings() {
     const [darkMode, setDarkMode] = useState(false);
     const [pushNotif, setPushNotif] = useState(true);
+
+    useEffect(() => {
+        const isDark = localStorage.getItem('darkMode') === 'true';
+        setDarkMode(isDark);
+        if (isDark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }, []);
+
+    const toggleDarkMode = () => {
+        const newMode = !darkMode;
+        setDarkMode(newMode);
+        localStorage.setItem('darkMode', newMode);
+        if (newMode) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    };
 
     return (
         <main className="page-content" style={{ minHeight: '100vh', paddingBottom: '80px' }}>
@@ -18,7 +39,7 @@ export default function AppSettings() {
             </header>
 
             <div style={{ padding: '16px' }}>
-                <SettingToggle label="다크 모드" checked={darkMode} onChange={() => setDarkMode(!darkMode)} />
+                <SettingToggle label="다크 모드" checked={darkMode} onChange={toggleDarkMode} />
                 <SettingToggle label="푸시 알림" checked={pushNotif} onChange={() => setPushNotif(!pushNotif)} />
 
                 <div style={{ marginTop: '32px', paddingTop: '16px', borderTop: '1px solid #eee' }}>
@@ -28,9 +49,9 @@ export default function AppSettings() {
 
                 <div style={{ marginTop: '24px' }}>
                     <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>기타</div>
-                    <Link href="#" style={{ display: 'block', padding: '12px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>이용약관</Link>
-                    <Link href="#" style={{ display: 'block', padding: '12px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>개인정보처리방침</Link>
-                    <Link href="#" style={{ display: 'block', padding: '12px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>오픈소스 라이선스</Link>
+                    <Link href="/mypage/settings/terms" style={{ width: '100%', textAlign: 'left', display: 'block', padding: '12px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>이용약관</Link>
+                    <Link href="/mypage/settings/privacy" style={{ width: '100%', textAlign: 'left', display: 'block', padding: '12px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>개인정보처리방침</Link>
+                    <Link href="/mypage/settings/opensource" style={{ width: '100%', textAlign: 'left', display: 'block', padding: '12px 0', fontSize: '0.95rem', color: 'var(--text-primary)', textDecoration: 'none', borderBottom: '1px solid #f0f0f0' }}>오픈소스 라이선스</Link>
                 </div>
             </div>
         </main>

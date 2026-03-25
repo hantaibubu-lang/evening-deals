@@ -19,6 +19,7 @@ CREATE TABLE public.stores (
   address text NOT NULL,
   lat numeric(10, 7), -- 위도
   lng numeric(10, 7), -- 경도
+  category text DEFAULT 'mart' CHECK (category IN ('mart', 'restaurant', 'bakery', 'meat', 'vegetable', 'seafood', 'dairy')),
   emoji text DEFAULT '🏪',
   phone_number text,
   created_at timestamp with time zone DEFAULT now()
@@ -31,6 +32,7 @@ CREATE TABLE public.products (
   name text NOT NULL,
   original_price integer NOT NULL,
   discount_price integer NOT NULL,
+  category text DEFAULT 'mart' CHECK (category IN ('mart', 'restaurant', 'bakery', 'meat', 'vegetable', 'seafood', 'dairy')),
   discount_rate integer GENERATED ALWAYS AS (ROUND((original_price - discount_price)::numeric / original_price * 100)) STORED,
   quantity integer DEFAULT 1,
   image_url text,
@@ -63,6 +65,19 @@ CREATE TABLE public.orders (
   status text DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'READY_FOR_PICKUP', 'COMPLETED', 'CANCELLED')),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 6. 리뷰(Reviews) 테이블
+CREATE TABLE public.reviews (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  store_id uuid REFERENCES public.stores(id) ON DELETE CASCADE NOT NULL,
+  order_id uuid REFERENCES public.orders(id) ON DELETE CASCADE NOT NULL,
+  rating integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  content text,
+  image_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  UNIQUE(order_id) -- 주문 1건당 리뷰 1개 제한
 );
 
 -- RLS(Row Level Security) 설정 예시 (생략 가능, 프로덕션 시 필수)

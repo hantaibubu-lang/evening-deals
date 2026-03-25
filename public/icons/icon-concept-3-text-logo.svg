@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF9E40"/>
+      <stop offset="50%" stop-color="#FF7A00"/>
+      <stop offset="100%" stop-color="#E86800"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg3)"/>
+  <!-- Sunset arc at bottom -->
+  <ellipse cx="256" cy="512" rx="300" ry="120" fill="#FFB347" opacity="0.3"/>
+  <!-- Big emoji-style shopping cart icon -->
+  <g transform="translate(256, 200)" fill="none" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Cart body -->
+    <path d="M-100,0 L-80,0 L-50,80 L70,80 L90,0 L-60,0"/>
+    <!-- Cart wheels -->
+    <circle cx="-40" cy="110" r="16" fill="white"/>
+    <circle cx="50" cy="110" r="16" fill="white"/>
+  </g>
+  <!-- Down arrow (price drop) -->
+  <g transform="translate(256, 200)">
+    <path d="M0,10 L0,55" stroke="#FFD93D" stroke-width="12" stroke-linecap="round"/>
+    <path d="M-18,40 L0,60 L18,40" stroke="#FFD93D" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <!-- Korean text "저녁떨이" -->
+  <text x="256" y="400" text-anchor="middle" font-family="'Noto Sans KR', Arial, sans-serif" font-weight="900" font-size="64" fill="white" letter-spacing="4">저녁떨이</text>
+  <!-- Subtitle -->
+  <text x="256" y="445" text-anchor="middle" font-family="'Noto Sans KR', Arial, sans-serif" font-weight="500" font-size="26" fill="white" opacity="0.8">마감 세일 할인</text>
+</svg>

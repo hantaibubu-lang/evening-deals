@@ -2,11 +2,15 @@
 import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/Toast';
+import ImageUploader from '@/components/ImageUploader';
+import { fetchWithAuth } from '@/utils/apiAuth';
 
 export default function ProductRegistrationPage() {
     const [name, setName] = useState('');
     const [originalPrice, setOriginalPrice] = useState('');
     const [discountPrice, setDiscountPrice] = useState('');
+    const [category, setCategory] = useState('mart');
     const [quantity, setQuantity] = useState('1');
     const [expiresAt, setExpiresAt] = useState(() => {
         const date = new Date();
@@ -15,7 +19,11 @@ export default function ProductRegistrationPage() {
     });
 
     const router = useRouter();
+    const { showToast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // 상품 이미지 상태
+    const [productImages, setProductImages] = useState([]);
 
     // OCR 관련 상태
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -83,17 +91,20 @@ export default function ProductRegistrationPage() {
         setIsSubmitting(true);
 
         try {
-            const res = await fetch('/api/products', {
+            const imageUrl = productImages.length > 0 ? productImages[0].url : '';
+
+            const res = await fetchWithAuth('/api/products', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name,
                     originalPrice,
                     discountPrice,
+                    category,
                     discountRate: calculateDiscountRate(),
                     quantity,
                     expiresAt,
-                    imageUrl: ''
+                    imageUrl,
                 })
             });
 
@@ -102,10 +113,10 @@ export default function ProductRegistrationPage() {
                 throw new Error(errorData.error || '상품 등록 실패');
             }
 
-            alert('상품이 성공적으로 등록되었습니다!');
+            showToast('상품이 성공적으로 등록되었습니다!');
             router.push('/admin/dashboard');
         } catch (err) {
-            alert(err.message);
+            showToast(err.message, 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -146,6 +157,8 @@ export default function ProductRegistrationPage() {
                         {/* 미리보기 또는 촬영 버튼 */}
                         {previewImage ? (
                             <div style={{ position: 'relative' }}>
+                                {/* base64 data URL이므로 Next.js Image 최적화 불필요 */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                     src={previewImage}
                                     alt="가격표 미리보기"
@@ -230,6 +243,21 @@ export default function ProductRegistrationPage() {
                         )}
                     </div>
 
+                    {/* 상품 이미지 업로드 */}
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', marginBottom: '8px' }}>
+                            🖼️ 상품 사진
+                        </label>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                            실제 상품 사진을 등록하면 고객의 구매 확률이 높아집니다.
+                        </p>
+                        <ImageUploader
+                            folder="products"
+                            maxFiles={5}
+                            onUpload={(images) => setProductImages(images)}
+                        />
+                    </div>
+
                     {/* 구분선 */}
                     {(previewImage || name || originalPrice) && (
                         <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
@@ -254,6 +282,30 @@ export default function ProductRegistrationPage() {
                             }}
                             required
                         />
+                    </div>
+
+                    {/* 카테고리 선택 */}
+                    <div>
+                        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', marginBottom: '8px' }}>카테고리</label>
+                        <select
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            style={{
+                                width: '100%', padding: '16px', borderRadius: '8px',
+                                border: '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-secondary)', fontSize: '1rem',
+                                appearance: 'none'
+                            }}
+                            required
+                        >
+                            <option value="mart">🛒 마트</option>
+                            <option value="restaurant">🍽️ 음식점</option>
+                            <option value="bakery">🍞 베이커리</option>
+                            <option value="meat">🥩 정육</option>
+                            <option value="vegetable">🥬 채소</option>
+                            <option value="seafood">🐟 수산</option>
+                            <option value="dairy">🥛 유제</option>
+                        </select>
                     </div>
 
                     {/* 가격 정보 */}

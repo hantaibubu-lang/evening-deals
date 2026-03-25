@@ -1,6 +1,21 @@
 'use client';
 import ProductCard from '@/components/ProductCard';
+import dynamic from 'next/dynamic';
 import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useRealtimeProducts } from '@/hooks/useRealtimeProducts';
+
+const KakaoMap = dynamic(() => import('@/components/KakaoMap'), {
+  loading: () => (
+    <div className="animate-pulse" style={{ width: '100%', height: '250px', borderRadius: '12px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+      지도 로딩 중...
+    </div>
+  ),
+  ssr: false,
+});
+import { fetchWithAuth } from '@/utils/apiAuth';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/components/Toast';
 
 const RADIUS_OPTIONS = [1, 3, 5, 10, 20];
 
@@ -12,14 +27,30 @@ const ChefHatIcon = () => (
 );
 
 function HomeContent() {
+  const { role } = useAuth();
+  const router = useRouter();
+  const { showToast } = useToast();
   const [currentLocationName, setCurrentLocationName] = useState('위치 파악 중...');
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [role, setRole] = useState('user');
   const [productRadius, setProductRadius] = useState(10);
   const [userCoords, setUserCoords] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showHeartPopup, setShowHeartPopup] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // 실시간 재고 반영
+  useRealtimeProducts((payload) => {
+    const updated = payload.new;
+    setRecommendedProducts(prev =>
+      prev.map(p => p.id === updated.id
+        ? { ...p, quantity: updated.quantity, status: updated.status }
+        : p
+      )
+    );
+  });
 
   const categories = [
     { id: 'all', name: '전체', icon: '🛒' },
@@ -33,53 +64,64 @@ function HomeContent() {
   ];
 
   // 상품 데이터만 다시 가져오기
-  const fetchProducts = useCallback(async (lat, lng, radius, category) => {
+  const fetchProducts = useCallback(async (lat, lng, radius, category, page = 1, append = false) => {
     try {
+      if (append) setLoadingMore(true);
       const categoryParam = category && category !== 'all' ? `&category=${category}` : '';
-      const res = await fetch(`/api/products/nearby?lat=${lat}&lng=${lng}&radius=${radius}${categoryParam}`);
+      const res = await fetchWithAuth(`/api/products/nearby?lat=${lat}&lng=${lng}&radius=${radius}${categoryParam}&page=${page}`);
       if (res.ok) {
-        const products = await res.json();
-        setRecommendedProducts(products);
+        const data = await res.json();
+        const products = data.products || data;
+        if (append) {
+          setRecommendedProducts(prev => [...prev, ...products]);
+        } else {
+          setRecommendedProducts(products);
+        }
+        setHasMore(data.hasMore || false);
+        setCurrentPage(page);
       }
     } catch (e) {
       console.error('상품 로딩 실패:', e);
+    } finally {
+      setLoadingMore(false);
     }
   }, []);
+
+  // admin 리다이렉트
+  useEffect(() => {
+    if (role === 'admin') {
+      router.push('/admin/dashboard');
+    }
+  }, [role, router]);
 
   // 초기 로드
   useEffect(() => {
     const fetchAll = async (lat, lng) => {
       try {
-        const userStr = localStorage.getItem('user');
-        let currentRole = 'user';
-        if (userStr) {
-            try {
-                const user = JSON.parse(userStr);
-                if (user.role) {
-                    currentRole = user.role;
-                    setRole(user.role);
-                }
-            } catch (e) {}
-        }
-
-        // If admin, redirect instead of loading heavy components
-        if (currentRole === 'admin') {
-            window.location.href = '/admin/dashboard';
-            return;
-        }
-
         setUserCoords({ lat, lng });
 
         const [geocodeRes, productsRes] = await Promise.all([
           fetch(`/api/geocode?lat=${lat}&lng=${lng}`),
-          fetch(`/api/products/nearby?lat=${lat}&lng=${lng}&radius=${productRadius}`)
+          fetchWithAuth(`/api/products/nearby?lat=${lat}&lng=${lng}&radius=${productRadius}`)
         ]);
 
         if (geocodeRes.ok) {
           const geoData = await geocodeRes.json();
           setCurrentLocationName(geoData.locationName || '알 수 없는 위치');
         }
-        if (productsRes.ok) setRecommendedProducts(await productsRes.json());
+        if (productsRes.ok) {
+          const data = await productsRes.json();
+          let products = data.products || data;
+          if (products.length > 0) {
+            products = products.map((p, index) => ({
+              ...p,
+              isSponsored: index === 0 ? true : p.isSponsored,
+              isClosed: index === 2 ? true : false
+            }));
+          }
+          setRecommendedProducts(products);
+          setHasMore(data.hasMore || false);
+        }
       } catch (error) {
         console.error('데이터 로딩 실패:', error);
       } finally {
@@ -105,16 +147,25 @@ function HomeContent() {
   // 상품 반경 변경 시
   const handleProductRadiusChange = (radius) => {
     setProductRadius(radius);
+    setCurrentPage(1);
     if (userCoords) {
-      fetchProducts(userCoords.lat, userCoords.lng, radius, selectedCategory);
+      fetchProducts(userCoords.lat, userCoords.lng, radius, selectedCategory, 1, false);
     }
   };
 
   // 카테고리 변경 시
   const handleCategoryChange = (categoryId) => {
     setSelectedCategory(categoryId);
+    setCurrentPage(1);
     if (userCoords) {
-      fetchProducts(userCoords.lat, userCoords.lng, productRadius, categoryId);
+      fetchProducts(userCoords.lat, userCoords.lng, productRadius, categoryId, 1, false);
+    }
+  };
+
+  // 더 보기
+  const handleLoadMore = () => {
+    if (userCoords && hasMore && !loadingMore) {
+      fetchProducts(userCoords.lat, userCoords.lng, productRadius, selectedCategory, currentPage + 1, true);
     }
   };
 
@@ -132,7 +183,7 @@ function HomeContent() {
   }
 
   // 사장님 뷰
-  if (role === 'manager') {
+  if (role === 'manager' || role === 'store_manager') {
       return (
         <main className="page-content" style={{ padding: 'var(--space-md)' }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: '16px', color: 'var(--text-primary)' }}>
@@ -146,9 +197,18 @@ function HomeContent() {
                 </p>
             </div>
 
-            <div className="btn-support-wrapper">
-                <button className="btn-support" onClick={() => window.location.href='/admin/product/new'}>
-                    마감 상품 등록하기
+            <div className="btn-support-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button className="btn-support" onClick={() => router.push('/store/dashboard/orders')} style={{ backgroundColor: '#111', color: '#fff' }}>
+                    📦 주문 현황 관리 (픽업 처리)
+                </button>
+                <button className="btn-support" onClick={() => router.push('/store/dashboard/analytics')} style={{ backgroundColor: 'var(--success)', color: '#fff' }}>
+                    📊 매출 및 환경 성과 분석 (신규)
+                </button>
+                <button className="btn-support" onClick={() => router.push('/store/dashboard/marketing')} style={{ backgroundColor: 'var(--primary)', color: '#fff' }}>
+                    📢 우리 동네 단골에게 알림 쏘기
+                </button>
+                <button className="btn-support" onClick={() => router.push('/admin/product/new')} style={{ backgroundColor: 'var(--bg-primary)', border: '1px solid #ddd', color: '#333' }}>
+                    ➕ 새로운 마감 상품 등록
                 </button>
             </div>
         </main>
@@ -162,6 +222,32 @@ function HomeContent() {
 
   return (
     <main className="page-content" style={{ position: 'relative' }}>
+      {/* 상단 스폰서 배너 (수익모델 3) */}
+      <div style={{ backgroundColor: 'var(--bg-primary)', padding: '12px 16px', borderBottom: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary)', padding: '2px 6px', backgroundColor: '#fff0f0', borderRadius: '4px' }}>AD 광고</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold' }}>내외동/장유 오늘의 핫딜🔥</span>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+              {/* 스폰서 아이템 1 */}
+              <div onClick={() => window.location.href='/store/s1'} style={{ flex: '0 0 auto', width: '240px', borderRadius: '8px', border: '1px solid #ffebb5', backgroundColor: '#fffdf5', padding: '12px', cursor: 'pointer', display: 'flex', gap: '12px', alignItems: 'center', boxShadow: '0 2px 4px rgba(255,181,0,0.1)' }}>
+                  <div style={{ width: '60px', height: '60px', borderRadius: '6px', backgroundImage: 'url("https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&q=80&w=200")', backgroundSize: 'cover' }} />
+                  <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '2px' }}>장촌 참치 스시 (내외점)</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>특초밥 세트 <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>30% ↓</span></div>
+                  </div>
+              </div>
+              {/* 스폰서 아이템 2 */}
+              <div onClick={() => window.location.href='/store/s2'} style={{ flex: '0 0 auto', width: '240px', borderRadius: '8px', border: '1px solid #ffebb5', backgroundColor: '#fffdf5', padding: '12px', cursor: 'pointer', display: 'flex', gap: '12px', alignItems: 'center', boxShadow: '0 2px 4px rgba(255,181,0,0.1)' }}>
+                  <div style={{ width: '60px', height: '60px', borderRadius: '6px', backgroundImage: 'url("https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&q=80&w=200")', backgroundSize: 'cover' }} />
+                  <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '2px' }}>율하 로스터리 카페</div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>수제 당근케익 <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>40% ↓</span></div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
       {/* Hero Section */}
       <div style={{ padding: 'var(--space-md) var(--space-md) 0' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: '800', marginBottom: 'var(--space-md)', color: 'var(--text-primary)' }}>
@@ -178,6 +264,27 @@ function HomeContent() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Map Section (Phase 11) */}
+      <div style={{ padding: '0 var(--space-md) var(--space-md)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: '800' }}>🗺️ 지도로 보기</h2>
+          <span style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer' }}>김해 전지역 ▾</span>
+        </div>
+        <KakaoMap lat={userCoords?.lat} lng={userCoords?.lng} stores={recommendedProducts} />
+        <button 
+          onClick={() => { showToast('현재 위치 기준 다시 검색합니다.', 'info'); }}
+          style={{ 
+            position: 'absolute', bottom: '26px', left: '50%', transform: 'translateX(-50%)', 
+            backgroundColor: 'rgba(255,255,255,0.95)', border: '1px solid var(--border-color)', 
+            padding: '8px 16px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', 
+            fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px', 
+            boxShadow: 'var(--shadow-md)', cursor: 'pointer', zIndex: 11
+          }}
+        >
+          🔄 이 지역에서 재검색
+        </button>
       </div>
 
       {/* Distance Filter */}
@@ -209,15 +316,29 @@ function HomeContent() {
 
       {/* Product Feed */}
       {recommendedProducts.length > 0 ? (
-        <div className="product-grid mb-xl" style={{ marginTop: 'var(--space-md)' }}>
-          {recommendedProducts.map((product) => (
-            <ProductCard key={product.id} product={{
-               ...product, 
-               name: `정성 가득 ${product.name}`, 
-               distance: productRadius > 1 ? Math.floor(Math.random() * productRadius) + 1 : 1 
-            }} />
-          ))}
-        </div>
+        <>
+          <div className="product-grid mb-xl" style={{ marginTop: 'var(--space-md)' }}>
+            {recommendedProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+          {hasMore && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '0 16px 24px' }}>
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '8px',
+                  border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)',
+                  fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-secondary)',
+                  cursor: loadingMore ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {loadingMore ? '불러오는 중...' : '더 보기'}
+              </button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="empty-state" style={{ marginTop: '20px', marginBottom: '40px' }}>
           <div className="emoji">🛒</div>
@@ -225,6 +346,18 @@ function HomeContent() {
           <p className="desc">반경 {productRadius}km 이내에 등록된 상품이 없습니다.</p>
         </div>
       )}
+
+      {/* 하단 김해 로컬 스폰서 배너 (수익모델 2) */}
+      <section onClick={() => window.open('https://search.naver.com')} style={{ margin: '32px 20px', padding: '24px 16px', backgroundColor: '#f0f4f8', borderRadius: '12px', border: '1px solid #e1e8f0', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>
+          <div style={{ width: '60px', height: '60px', borderRadius: '50%', backgroundColor: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+              💪
+          </div>
+          <div>
+              <div style={{ display: 'inline-block', fontSize: '0.7rem', color: 'var(--text-muted)', border: '1px solid #ccc', padding: '2px 6px', borderRadius: '4px', marginBottom: '6px' }}>AD로컬 스폰서</div>
+              <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#1a365d', marginBottom: '4px' }}>삼계동 주민 환영! 핏플렉스짐</div>
+              <div style={{ fontSize: '0.85rem', color: '#4a5568' }}>PT 등록 시 저녁떨이 유저 20% 추가 할인 쿠폰 제공</div>
+          </div>
+      </section>
 
       {/* Main CTA */}
       <div className="btn-support-wrapper">

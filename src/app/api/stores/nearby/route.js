@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { getDistanceKm, formatDistance } from '@/lib/geo';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function GET(request) {
+    const limited = await checkRateLimit(request, { limit: 60, windowMs: 60000, keyPrefix: 'stores-nearby' });
+    if (limited) return limited;
+
     try {
         const { searchParams } = new URL(request.url);
         const userLat = parseFloat(searchParams.get('lat'));

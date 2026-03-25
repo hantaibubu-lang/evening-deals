@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { verifyAuth } from '@/lib/authServer';
 
 export async function GET(request) {
     try {
-        // MVP: 하드코딩된 유저 ID 사용 (나중에 세션/인증으로 교체)
-        const { data: users } = await supabase.from('users').select('id').eq('email', 'admin@eveningdeals.com').single();
-        const userId = users?.id;
-
-        if (!userId) {
-            return NextResponse.json({ stores: [], products: [] });
+        const { profile, error: authError } = await verifyAuth(request);
+        if (authError || !profile) {
+            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
         }
 
-        // 유저의 찜한 스토어 및 찜한 상품 가져오기
         const { data: favorites, error } = await supabase
             .from('favorites')
             .select(`
@@ -19,11 +16,10 @@ export async function GET(request) {
                 store:stores(*),
                 product:products(*, store:stores(name))
             `)
-            .eq('user_id', userId);
+            .eq('user_id', profile.id);
 
         if (error) throw error;
 
-        // 프론트엔드 포맷에 맞게 분류
         const mappedStores = favorites
             .filter(f => f.store !== null && f.product === null)
             .map(f => ({
@@ -31,7 +27,7 @@ export async function GET(request) {
                 name: f.store.name,
                 address: f.store.address,
                 emoji: f.store.emoji || '🏪',
-                dealCount: 0 // MVP 생략
+                dealCount: 0
             }));
 
         const mappedProducts = favorites
@@ -59,15 +55,20 @@ export async function GET(request) {
 
 export async function POST(request) {
     try {
-        const body = await request.json();
-        const { userId, targetId, type } = body; // targetId is either storeId or productId
+        const { profile, error: authError } = await verifyAuth(request);
+        if (authError || !profile) {
+            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
+        }
 
-        if (!userId || !targetId || !type) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        const body = await request.json();
+        const { targetId, type } = body;
+
+        if (!targetId || !type || !['STORE', 'PRODUCT'].includes(type)) {
+            return NextResponse.json({ error: 'targetId와 type(STORE 또는 PRODUCT)이 필요합니다.' }, { status: 400 });
         }
 
         const insertData = {
-            user_id: userId,
+            user_id: profile.id,
             type: type
         };
 
@@ -94,16 +95,20 @@ export async function POST(request) {
 
 export async function DELETE(request) {
     try {
+        const { profile, error: authError } = await verifyAuth(request);
+        if (authError || !profile) {
+            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
+        }
+
         const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
         const targetId = searchParams.get('targetId');
         const type = searchParams.get('type');
 
-        if (!userId || !targetId || !type) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!targetId || !type || !['STORE', 'PRODUCT'].includes(type)) {
+            return NextResponse.json({ error: 'targetId와 type(STORE 또는 PRODUCT)이 필요합니다.' }, { status: 400 });
         }
 
-        let dbQuery = supabase.from('favorites').delete().eq('user_id', userId);
+        let dbQuery = supabase.from('favorites').delete().eq('user_id', profile.id);
 
         if (type === 'STORE') {
             dbQuery = dbQuery.eq('store_id', targetId);
@@ -112,7 +117,6 @@ export async function DELETE(request) {
         }
 
         const { error } = await dbQuery;
-
         if (error) throw error;
 
         return NextResponse.json({ success: true });

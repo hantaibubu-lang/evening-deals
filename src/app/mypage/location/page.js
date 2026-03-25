@@ -1,17 +1,20 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
+import { useToast } from '@/components/Toast';
 
 export default function LocationSetting() {
-    const [currentLocation, setCurrentLocation] = useState('역삼동');
+    const [currentLocation, setCurrentLocation] = useState('내외동');
     const [isSearching, setIsSearching] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const popularLocations = ['역삼동', '강남구', '서초동', '삼성동', '신논현동', '논현동'];
+    const popularLocations = ['내외동', '장유동', '율하동', '삼계동', '부원동', '활천동'];
+
+    const { showToast } = useToast();
 
     const handleLocationSelect = (location) => {
         setCurrentLocation(location);
-        alert(`동네가 '${location}'(으)로 설정되었습니다.`);
+        showToast(`동네가 '${location}'(으)로 설정되었습니다.`);
     };
 
     const handleGPS = () => {
@@ -19,13 +22,13 @@ export default function LocationSetting() {
         if ('geolocation' in navigator) {
             navigator.geolocation.getCurrentPosition(
                 () => {
-                    setCurrentLocation('역삼 1동');
+                    setCurrentLocation('내외동');
                     setIsSearching(false);
-                    alert('현재 위치로 설정되었습니다: 역삼 1동');
+                    showToast('현재 위치로 설정되었습니다: 내외동');
                 },
                 () => {
                     setIsSearching(false);
-                    alert('위치를 가져올 수 없습니다.');
+                    showToast('위치를 가져올 수 없습니다.', 'error');
                 },
                 { timeout: 5000 }
             );

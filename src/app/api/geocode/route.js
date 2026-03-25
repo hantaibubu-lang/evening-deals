@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 /**
  * 역지오코딩 API: GPS 좌표 → 한국 주소/동네 이름
  * Nominatim (OpenStreetMap) API 사용 (무료, API 키 불필요)
  */
 export async function GET(request) {
+    const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'geocode' });
+    if (limited) return limited;
+
     try {
         const { searchParams } = new URL(request.url);
         const lat = searchParams.get('lat');
@@ -12,6 +16,14 @@ export async function GET(request) {
 
         if (!lat || !lng) {
             return NextResponse.json({ error: 'lat, lng 필수' }, { status: 400 });
+        }
+
+        const parsedLat = parseFloat(lat);
+        const parsedLng = parseFloat(lng);
+        if (isNaN(parsedLat) || isNaN(parsedLng) ||
+            parsedLat < -90 || parsedLat > 90 ||
+            parsedLng < -180 || parsedLng > 180) {
+            return NextResponse.json({ error: '유효하지 않은 좌표입니다.' }, { status: 400 });
         }
 
         // Nominatim 역지오코딩 API 호출

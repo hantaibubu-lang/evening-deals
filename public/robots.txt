@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# 관리자/API 경로 크롤링 금지
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login/oauth/
+
+Sitemap: https://evening-deals.vercel.app/sitemap.xml

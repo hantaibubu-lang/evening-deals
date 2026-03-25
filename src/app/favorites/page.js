@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 import StoreCard from '@/components/StoreCard';
+import { fetchWithAuth } from '@/utils/apiAuth';
 
 export default function Favorites() {
     const [activeTab, setActiveTab] = useState('상품');
@@ -10,11 +11,12 @@ export default function Favorites() {
     const [favoriteStores, setFavoriteStores] = useState([]);
     const [favoriteProducts, setFavoriteProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [sortOrder, setSortOrder] = useState('recent');
 
     useEffect(() => {
         const fetchFavoritesData = async () => {
             try {
-                const res = await fetch('/api/users/favorites');
+                const res = await fetchWithAuth('/api/users/favorites');
                 if (res.ok) {
                     const data = await res.json();
                     setFavoriteStores(data.stores || []);
@@ -46,7 +48,14 @@ export default function Favorites() {
             </div>
 
             <div className="filter-row" style={{ marginTop: '16px' }}>
-                <button className="filter-btn">최근 찜한 순</button>
+                <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #ddd', backgroundColor: 'var(--bg-secondary)', fontSize: '0.9rem', outline: 'none', cursor: 'pointer' }}
+                >
+                    <option value="recent">최근 찜한 순</option>
+                    <option value="discount">높은 할인율 순</option>
+                </select>
             </div>
 
             {/* 상품 탭 */}
@@ -54,7 +63,12 @@ export default function Favorites() {
                 <>
                     {favoriteProducts.length > 0 ? (
                         <div className="product-grid mb-xl">
-                            {favoriteProducts.map((product) => (
+                            {[...favoriteProducts].sort((a, b) => {
+                                if (sortOrder === 'discount') {
+                                    return (b.discountRate || 0) - (a.discountRate || 0);
+                                }
+                                return 0; // Default order from backend
+                            }).map((product) => (
                                 <ProductCard key={product.id} product={product} />
                             ))}
                         </div>
