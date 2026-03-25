@@ -108,17 +108,21 @@ export async function PATCH(request) {
         }
 
         const body = await request.json();
-        const { storeId, action } = body; // action: 'approve' | 'reject'
+        const { storeId, action, rejectReason } = body; // action: 'approve' | 'reject'
 
         if (!storeId || !['approve', 'reject'].includes(action)) {
             return NextResponse.json({ error: '유효하지 않은 요청입니다.' }, { status: 400 });
         }
 
         const newStatus = action === 'approve' ? 'approved' : 'rejected';
+        const updateData = { status: newStatus };
+        if (action === 'reject' && rejectReason) {
+            updateData.reject_reason = rejectReason;
+        }
 
         const { data, error } = await supabase
             .from('stores')
-            .update({ status: newStatus })
+            .update(updateData)
             .eq('id', storeId)
             .select(`
                 id, name, status,
