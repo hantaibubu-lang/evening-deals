@@ -7,6 +7,7 @@ import { fetchWithAuth } from '@/utils/apiAuth';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeStock } from '@/hooks/useRealtimeProducts';
+import { useFavorite } from '@/hooks/useFavorite';
 
 export default function ProductDetail({ params }) {
     const { id } = use(params);
@@ -16,9 +17,10 @@ export default function ProductDetail({ params }) {
     const { isAuthenticated } = useAuth();
     const [product, setProduct] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isFavorite, setIsFavorite] = useState(false);
+    const [initialFavorited, setInitialFavorited] = useState(false);
     const [activeTab, setActiveTab] = useState('description');
     const [quantity, setQuantity] = useState(1);
+    const { isFavorited: isFavorite, toggle: handleFavoriteToggle } = useFavorite(productId, 'PRODUCT', initialFavorited);
 
     // 실시간 재고 구독
     useRealtimeStock(productId, ({ quantity: newQty, status: newStatus }) => {
@@ -43,8 +45,7 @@ export default function ProductDetail({ params }) {
 
                 if (favoritesRes.ok) {
                     const favoritesData = await favoritesRes.json();
-                    const isFav = favoritesData.products.some(p => p.id === productId);
-                    setIsFavorite(isFav);
+                    setInitialFavorited(favoritesData.products.some(p => p.id === productId));
                 }
             } catch (error) {
                 console.error("데이터 로딩 실패:", error);
@@ -54,45 +55,6 @@ export default function ProductDetail({ params }) {
         };
         fetchData();
     }, [productId]);
-
-    const handleFavoriteToggle = async () => {
-        if (!isAuthenticated) {
-            showToast('로그인이 필요합니다.', 'error');
-            router.push('/login');
-            return;
-        }
-
-        // Optimistic UI: 먼저 UI를 즉각적으로 변경
-        const previousState = isFavorite;
-        setIsFavorite(!previousState);
-
-        try {
-            const method = previousState ? 'DELETE' : 'POST';
-            const url = previousState
-                ? `/api/users/favorites?targetId=${productId}&type=PRODUCT`
-                : '/api/users/favorites';
-
-            const options = {
-                method,
-                headers: { 'Content-Type': 'application/json' }
-            };
-
-            if (!previousState) {
-                options.body = JSON.stringify({ targetId: productId, type: 'PRODUCT' });
-            }
-
-            const res = await fetchWithAuth(url, options);
-            if (!res.ok) {
-                throw new Error('API failed');
-            }
-            showToast(previousState ? '찜 목록에서 삭제되었습니다.' : '찜 목록에 추가되었습니다!');
-        } catch (error) {
-            console.error("찜 처리 중 오류:", error);
-            // 실패 시 원래 상태로 롤백 (Rollback)
-            setIsFavorite(previousState);
-            showToast('네트워크 오류가 발생했습니다. 다시 시도해주세요.', 'error');
-        }
-    };
 
     const handleShare = async () => {
         const shareData = {

@@ -3,7 +3,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fetchWithAuth } from '@/utils/apiAuth';
-import { useToast } from '@/components/Toast';
+import { useFavorite } from '@/hooks/useFavorite';
 
 export default function StoreDetail({ params }) {
     const { id } = use(params);
@@ -11,8 +11,8 @@ export default function StoreDetail({ params }) {
     const [store, setStore] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('products');
-    const [isFavorite, setIsFavorite] = useState(false);
-    const { showToast } = useToast();
+    const [initialFavorited, setInitialFavorited] = useState(false);
+    const { isFavorited: isFavorite, toggle: handleFavoriteToggle } = useFavorite(storeId, 'STORE', initialFavorited);
 
     useEffect(() => {
         const fetchStoreData = async () => {
@@ -24,7 +24,7 @@ export default function StoreDetail({ params }) {
                 if (storeRes.ok) setStore(await storeRes.json());
                 if (favoritesRes.ok) {
                     const favData = await favoritesRes.json();
-                    setIsFavorite(favData.stores?.some(s => s.id === storeId) || false);
+                    setInitialFavorited(favData.stores?.some(s => s.id === storeId) || false);
                 }
             } catch (error) {
                 console.error("스토어 로딩 실패:", error);
@@ -34,24 +34,6 @@ export default function StoreDetail({ params }) {
         };
         fetchStoreData();
     }, [storeId]);
-
-    const handleFavoriteToggle = async () => {
-        const prev = isFavorite;
-        setIsFavorite(!prev);
-        try {
-            const method = prev ? 'DELETE' : 'POST';
-            const url = prev ? `/api/users/favorites?targetId=${storeId}&type=STORE` : '/api/users/favorites';
-            const options = { method, headers: { 'Content-Type': 'application/json' } };
-            if (!prev) options.body = JSON.stringify({ targetId: storeId, type: 'STORE' });
-
-            const res = await fetchWithAuth(url, options);
-            if (!res.ok) throw new Error();
-            showToast(prev ? '단골을 취소했습니다.' : '단골 마트로 등록했습니다!');
-        } catch {
-            setIsFavorite(prev);
-            showToast('오류가 발생했습니다.', 'error');
-        }
-    };
 
     if (isLoading) {
         return (

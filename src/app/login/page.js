@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -10,6 +10,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { showToast } = useToast();
     const { signIn } = useAuth();
 
@@ -20,10 +21,9 @@ export default function LoginPage() {
         try {
             await signIn({ email, password });
             showToast('로그인 성공!');
-            // AuthContext의 onAuthStateChange가 profile을 로드한 뒤 role에 따라 리다이렉트
-            // 약간의 딜레이 후 이동 (프로필 로드 대기)
+            const redirect = searchParams.get('redirect') || '/';
             setTimeout(() => {
-                router.push('/');
+                router.push(redirect);
             }, 300);
         } catch (error) {
             console.error('로그인 에러:', error);
@@ -44,8 +44,9 @@ export default function LoginPage() {
         try {
             await signIn({ email: testEmail, password: testPassword });
             showToast('테스트 로그인 성공!');
+            const redirect = searchParams.get('redirect') || '/';
             setTimeout(() => {
-                router.push('/');
+                router.push(redirect);
             }, 300);
         } catch (error) {
             console.error('테스트 로그인 에러:', error);

@@ -3,9 +3,11 @@ import { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useFavorite } from '@/hooks/useFavorite';
+import { useCountdown } from '@/hooks/useCountdown';
 
 export default memo(function ProductCard({ product, isFavorited: initialFavorited = false }) {
     const { isFavorited, toggle } = useFavorite(product.id, 'PRODUCT', initialFavorited);
+    const { timeLeft, isUrgent, isExpired } = useCountdown(product.expires_at);
 
     return (
         <Link href={`/product/${product.id}`} aria-label={`${product.name}, ${product.discountRate || 30}% 할인, ${product.discountPrice?.toLocaleString()}원`} className="product-card fade-in" style={{ display: 'block', textDecoration: 'none', color: 'inherit', transition: 'transform 0.2s', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
@@ -32,7 +34,18 @@ export default memo(function ProductCard({ product, isFavorited: initialFavorite
                     {isFavorited ? '❤️' : '🤍'}
                 </button>
                 <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)', padding: '20px 10px 8px', zIndex: 1 }}>
-                    <span className="badge-closing" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>🔥 30분 마감</span>
+                    {timeLeft ? (
+                        <span style={{
+                            fontSize: '0.75rem', padding: '3px 8px',
+                            backgroundColor: isUrgent ? '#ff3b30' : 'rgba(0,0,0,0.5)',
+                            color: 'white', borderRadius: '4px', fontWeight: '700',
+                            animation: isUrgent ? 'pulse 1s infinite' : 'none',
+                        }}>
+                            {isExpired ? '⏰ 마감' : `⏰ ${timeLeft}`}
+                        </span>
+                    ) : (
+                        <span className="badge-closing" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>🔥 마감 임박</span>
+                    )}
                 </div>
                 <Image src={product.imageUrl} alt={`${product.name} 상품 이미지`} fill sizes="(max-width: 480px) 50vw, 240px" style={{ objectFit: 'cover', transition: 'transform 0.5s' }} />
             </div>
