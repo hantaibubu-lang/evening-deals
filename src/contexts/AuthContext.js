@@ -35,6 +35,10 @@ export function AuthProvider({ children }) {
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
+                    // 초기 세션에서도 쿠키 동기화
+                    if (session.access_token) {
+                        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+                    }
                     setUser(session.user);
                     const prof = await fetchProfile(session.user);
                     setProfile(prof);
@@ -51,7 +55,15 @@ export function AuthProvider({ children }) {
         // Auth 상태 변경 리스너
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                if (event === 'SIGNED_IN' && session?.user) {
+                if (session?.access_token) {
+                    // 쿠키에 토큰 저장 (middleware에서 인식 가능하도록)
+                    document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+                } else if (event === 'SIGNED_OUT') {
+                    // 쿠키 삭제
+                    document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax';
+                }
+
+                if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
                     setUser(session.user);
                     const prof = await fetchProfile(session.user);
                     setProfile(prof);

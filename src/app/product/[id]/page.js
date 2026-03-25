@@ -112,6 +112,68 @@ export default function ProductDetail({ params }) {
         );
     }
 
+    // Schema.org JSON-LD 구조화 데이터 + 동적 메타 태그
+    useEffect(() => {
+        if (!product) return;
+
+        // JSON-LD 삽입
+        const jsonLd = {
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            'name': product.name,
+            'description': product.description || `${product.storeName}의 마감 할인 상품`,
+            'image': product.imageUrl || '',
+            'offers': {
+                '@type': 'Offer',
+                'price': product.discountPrice || product.discount_price || 0,
+                'priceCurrency': 'KRW',
+                'availability': (product.stock || product.quantity) > 0
+                    ? 'https://schema.org/InStock'
+                    : 'https://schema.org/SoldOut',
+                'seller': {
+                    '@type': 'Organization',
+                    'name': product.storeName,
+                }
+            },
+        };
+
+        if (product.rating > 0) {
+            jsonLd.aggregateRating = {
+                '@type': 'AggregateRating',
+                'ratingValue': product.rating,
+                'reviewCount': product.reviewCount || 1,
+            };
+        }
+
+        const script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.textContent = JSON.stringify(jsonLd);
+        script.id = 'product-jsonld';
+        document.head.appendChild(script);
+
+        // 동적 OG 메타 태그
+        const setMeta = (property, content) => {
+            let tag = document.querySelector(`meta[property="${property}"]`);
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.setAttribute('property', property);
+                document.head.appendChild(tag);
+            }
+            tag.setAttribute('content', content);
+        };
+
+        document.title = `${product.name} - 저녁떨이`;
+        setMeta('og:title', `${product.name} - ${product.discountRate}% 할인`);
+        setMeta('og:description', `${product.storeName}에서 ${product.discountPrice?.toLocaleString()}원에 만나보세요!`);
+        setMeta('og:type', 'product');
+        if (product.imageUrl) setMeta('og:image', product.imageUrl);
+
+        return () => {
+            const el = document.getElementById('product-jsonld');
+            if (el) el.remove();
+        };
+    }, [product]);
+
     return (
         <main className="page-content" style={{ paddingBottom: '80px' }}>
             {/* 뒤로가기 헤더 */}

@@ -75,10 +75,11 @@ export default function TermsPage() {
 
                 <Section title="제6조 (주문 및 결제)">
                     <ol style={{ paddingLeft: '18px' }}>
-                        <li style={{ marginBottom: '6px' }}><strong>주문의 성격:</strong> 본 서비스의 주문은 소비자가 매장을 방문하여 현장에서 결제하는 <strong>픽업 예약</strong> 방식입니다. 앱 내에서 선결제가 이루어지지 않습니다.</li>
-                        <li style={{ marginBottom: '6px' }}><strong>주문 취소:</strong> 소비자 회원은 픽업 전까지 앱 내에서 주문을 취소할 수 있습니다.</li>
-                        <li style={{ marginBottom: '6px' }}><strong>가격 표시:</strong> 앱에 표시된 가격은 마감 할인 가격이며, 실제 현장 결제 시 동일 금액이 적용됩니다.</li>
-                        <li><strong>재고 소진:</strong> 주문 후 실제 픽업 전 재고가 소진된 경우, 사장님 회원은 주문을 취소할 수 있으며 소비자 회원에게 알림이 전송됩니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>주문 방식:</strong> 소비자 회원은 앱 내에서 마감 할인 상품을 선택한 후, <strong>온라인 선결제</strong>를 통해 픽업 예약을 생성합니다. 결제는 토스페이먼츠(신용/체크카드, 카카오페이, 토스페이)를 통해 처리됩니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>주문 취소 및 환불:</strong> 소비자 회원은 매장의 픽업 준비가 시작되기 전(주문 상태 &quot;픽업 대기&quot;)까지 앱 내에서 주문을 취소할 수 있으며, 온라인 결제 금액은 원결제 수단으로 <strong>전액 환불</strong>됩니다. 환불은 결제 수단에 따라 영업일 기준 1~3일이 소요될 수 있습니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>가격 표시:</strong> 앱에 표시된 할인가가 결제 금액이며, 쿠폰·포인트 사용 시 추가 할인이 적용됩니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>재고 소진:</strong> 주문 후 실제 픽업 전 재고가 소진된 경우, 사장님 회원은 주문을 취소할 수 있으며 결제 금액은 자동 환불되고 소비자 회원에게 알림이 전송됩니다.</li>
+                        <li><strong>0원 결제:</strong> 쿠폰·포인트로 전액 할인 시 결제 없이 주문이 생성되며, 취소 시 사용된 쿠폰·포인트가 복구됩니다.</li>
                     </ol>
                 </Section>
 

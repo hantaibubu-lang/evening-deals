@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase';
+import { ProductJsonLd } from '@/components/JsonLd';
 
 export async function generateMetadata({ params }) {
     const { id } = await params;
@@ -35,6 +36,22 @@ export async function generateMetadata({ params }) {
     }
 }
 
-export default function ProductLayout({ children }) {
-    return children;
+export default async function ProductLayout({ children, params }) {
+    const { id } = await params;
+    let product = null;
+    try {
+        const { data } = await supabaseAdmin
+            .from('products')
+            .select('id, name, description, discount_price, original_price, discount_rate, image_url, status, expires_at, store:stores(name), quantity')
+            .eq('id', id)
+            .single();
+        product = data;
+    } catch {}
+
+    return (
+        <>
+            <ProductJsonLd product={product} />
+            {children}
+        </>
+    );
 }

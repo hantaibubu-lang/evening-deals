@@ -1,10 +1,100 @@
 'use client';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { fetchWithAuth } from '@/utils/apiAuth';
 import SponsorBanner from '@/components/SponsorBanner';
 
 export default function CheckoutSuccessPage() {
     const router = useRouter();
-    const pickupNumber = Math.floor(100 + Math.random() * 900);
+    const searchParams = useSearchParams();
+    const [status, setStatus] = useState('loading'); // loading | success | error
+    const [earnedPoints, setEarnedPoints] = useState(0);
+    const [errorMsg, setErrorMsg] = useState('');
+    const pickupNumber = useRef(Math.floor(100 + Math.random() * 900)).current;
+    const confirmedRef = useRef(false);
+
+    useEffect(() => {
+        if (confirmedRef.current) return;
+        confirmedRef.current = true;
+
+        const paymentKey = searchParams.get('paymentKey');
+        const orderId = searchParams.get('orderId');
+        const amount = parseInt(searchParams.get('amount') || '0', 10);
+
+        // paymentKey 없음 = 0원 결제 또는 직접 접근
+        if (!paymentKey || !orderId) {
+            setStatus('success');
+            return;
+        }
+
+        // sessionStorage에서 주문 정보 복원
+        let pendingOrder = null;
+        try {
+            const raw = sessionStorage.getItem(`pending_${orderId}`);
+            if (raw) pendingOrder = JSON.parse(raw);
+        } catch { /* ignore */ }
+
+        if (!pendingOrder) {
+            setStatus('error');
+            setErrorMsg('결제 정보를 찾을 수 없습니다. 주문 내역을 확인해주세요.');
+            return;
+        }
+
+        // 결제 확인 API 호출
+        fetchWithAuth('/api/payments/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentKey, orderId, amount, ...pendingOrder }),
+        }).then(async (res) => {
+            try { sessionStorage.removeItem(`pending_${orderId}`); } catch { /* ignore */ }
+            if (res.ok) {
+                const data = await res.json();
+                setEarnedPoints(data.earnedPoints || Math.floor(amount * 0.01));
+                setStatus('success');
+            } else {
+                const err = await res.json().catch(() => ({}));
+                setErrorMsg(err.error || '결제 확인에 실패했습니다.');
+                setStatus('error');
+            }
+        }).catch(() => {
+            setErrorMsg('네트워크 오류가 발생했습니다. 주문 내역을 확인해주세요.');
+            setStatus('error');
+        });
+    }, [searchParams]);
+
+    if (status === 'loading') {
+        return (
+            <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px', backgroundColor: '#fff', gap: '16px' }}>
+                <div style={{ width: '48px', height: '48px', border: '4px solid #f0f0f0', borderTop: '4px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <p style={{ color: '#666', fontWeight: '600' }}>결제를 확인하고 있습니다...</p>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </main>
+        );
+    }
+
+    if (status === 'error') {
+        return (
+            <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px', backgroundColor: '#fff', textAlign: 'center' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '16px' }}>😢</div>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: '800', marginBottom: '8px' }}>결제 확인 실패</h1>
+                <p style={{ color: '#666', marginBottom: '32px', lineHeight: 1.6 }}>{errorMsg}</p>
+                <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '400px' }}>
+                    <button
+                        onClick={() => router.push('/history')}
+                        style={{ flex: 1, padding: '16px', borderRadius: '8px', border: '1px solid #ddd', backgroundColor: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                        주문 내역 확인
+                    </button>
+                    <button
+                        onClick={() => router.push('/')}
+                        style={{ flex: 1, padding: '16px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--primary)', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                        홈으로
+                    </button>
+                </div>
+            </main>
+        );
+    }
 
     return (
         <main className="page-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px', backgroundColor: '#fff' }}>
@@ -25,7 +115,7 @@ export default function CheckoutSuccessPage() {
             <div style={{ width: '100%', maxWidth: '400px', padding: '14px 16px', backgroundColor: 'var(--primary-glow)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                 <span style={{ fontSize: '1.3rem' }}>💰</span>
                 <span style={{ fontSize: '0.9rem', color: 'var(--primary-dark)', fontWeight: '600' }}>
-                    결제 금액의 1% 포인트가 적립되었습니다!
+                    {earnedPoints > 0 ? `${earnedPoints.toLocaleString()}P 포인트가 적립되었습니다!` : '결제 금액의 1% 포인트가 적립됩니다!'}
                 </span>
             </div>
 

@@ -17,9 +17,16 @@ export default function SignupPage() {
 
     const [isLoading, setIsLoading] = useState(false);
     const [ageConfirmed, setAgeConfirmed] = useState(false);
+    const [termsAgreed, setTermsAgreed] = useState(false);
 
     const handleSignup = async (e) => {
         e.preventDefault();
+
+        // 약관 동의 확인
+        if (!termsAgreed) {
+            showToast('이용약관 및 개인정보처리방침에 동의해주세요.', 'error');
+            return;
+        }
 
         // 만 14세 이상 확인
         if (!ageConfirmed) {
@@ -161,6 +168,25 @@ export default function SignupPage() {
                         )}
                     </div>
 
+                    {/* 이용약관 및 개인정보처리방침 동의 */}
+                    <div>
+                        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                            <input
+                                type="checkbox"
+                                checked={termsAgreed}
+                                onChange={(e) => setTermsAgreed(e.target.checked)}
+                                required
+                                aria-required="true"
+                                style={{ marginTop: '2px', accentColor: 'var(--primary)', width: '18px', height: '18px', flexShrink: 0 }}
+                            />
+                            <span>
+                                <Link href="/terms" target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>이용약관</Link> 및{' '}
+                                <Link href="/privacy" target="_blank" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>개인정보처리방침</Link>에 동의합니다.{' '}
+                                <span style={{ color: 'var(--danger)', fontSize: '0.8rem' }}>(필수)</span>
+                            </span>
+                        </label>
+                    </div>
+
                     {/* 만 14세 이상 확인 (법적 의무) */}
                     <div>
                         <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
@@ -193,8 +219,8 @@ export default function SignupPage() {
                         borderRadius: '8px',
                         marginTop: '8px',
                         cursor: isLoading ? 'wait' : 'pointer',
-                        opacity: (isLoading || !ageConfirmed) ? 0.6 : 1
-                    }} disabled={isLoading || !ageConfirmed}>
+                        opacity: (isLoading || !ageConfirmed || !termsAgreed) ? 0.6 : 1
+                    }} disabled={isLoading || !ageConfirmed || !termsAgreed}>
                         {isLoading ? '처리 중...' : '가입 완료하기'}
                     </button>
                 </form>

@@ -81,31 +81,80 @@ export default function CheckoutPage() {
 
     const handleCheckout = async () => {
         setIsProcessing(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        try {
-            const res = await fetchWithAuth('/api/users/orders', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    storeId: product.storeId || product.store_id,
-                    productId: product.id,
-                    quantity,
-                    totalPrice: finalPrice,
-                    couponId: selectedCoupon?.id || null,
-                    usedPoints: pointDiscount,
-                })
-            });
-            if (res.ok) {
-                showToast('결제가 성공적으로 완료되었습니다!');
-                router.push('/checkout/success');
-            } else {
-                const errData = await res.json();
-                showToast(`결제 실패: ${errData.error || '알 수 없는 오류'}`, 'error');
+
+        // 0원 결제 (포인트/쿠폰으로 전액 할인)
+        if (finalPrice === 0) {
+            try {
+                const res = await fetchWithAuth('/api/users/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        storeId: product.storeId || product.store_id,
+                        productId: product.id,
+                        quantity,
+                        totalPrice: 0,
+                        couponId: selectedCoupon?.id || null,
+                        usedPoints: pointDiscount,
+                    })
+                });
+                if (res.ok) {
+                    router.push('/checkout/success');
+                } else {
+                    const err = await res.json();
+                    showToast(`주문 실패: ${err.error || '오류가 발생했습니다.'}`, 'error');
+                    setIsProcessing(false);
+                }
+            } catch {
+                showToast('주문 처리 중 오류가 발생했습니다.', 'error');
                 setIsProcessing(false);
             }
+            return;
+        }
+
+        // 토스페이먼츠 결제 요청
+        try {
+            const tossOrderId = `ed_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+            // 결제 완료 후 성공 페이지에서 사용할 주문 정보 임시 저장
+            sessionStorage.setItem(`pending_${tossOrderId}`, JSON.stringify({
+                productId: product.id,
+                storeId: product.storeId || product.store_id,
+                quantity,
+                couponId: selectedCoupon?.id || null,
+                usedPoints: pointDiscount,
+                amount: finalPrice,
+            }));
+
+            // Toss Payments SDK 동적 로드
+            await new Promise((resolve, reject) => {
+                if (window.TossPayments) { resolve(); return; }
+                const s = document.createElement('script');
+                s.src = 'https://js.tosspayments.com/v1/payment';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+
+            const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
+            const tossPayments = window.TossPayments(clientKey);
+
+            const methodMap = { card: '카드', kakaopay: '카카오페이', tosspay: '토스페이' };
+            const tossMethod = methodMap[paymentMethod] || '카드';
+
+            await tossPayments.requestPayment(tossMethod, {
+                amount: finalPrice,
+                orderId: tossOrderId,
+                orderName: product.name,
+                customerName: '저녁떨이 고객',
+                successUrl: `${window.location.origin}/checkout/success`,
+                failUrl: `${window.location.origin}/checkout/fail`,
+            });
+            // requestPayment는 리디렉션하므로 이후 코드는 실행 안 됨
         } catch (error) {
-            console.error('Order Error:', error);
-            showToast('주문 처리 중 오류가 발생했습니다.', 'error');
+            // 사용자가 결제창을 닫았거나 오류 발생
+            if (error?.code !== 'USER_CANCEL') {
+                showToast('결제 요청 중 오류가 발생했습니다.', 'error');
+            }
             setIsProcessing(false);
         }
     };

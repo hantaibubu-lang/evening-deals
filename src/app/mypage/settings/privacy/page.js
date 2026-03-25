@@ -58,8 +58,11 @@ export default function PrivacyPage() {
                     <p style={{ marginBottom: '8px' }}><strong>④ 사장님 회원 추가 수집</strong></p>
                     <p style={{ marginBottom: '12px' }}>매장명, 매장 주소, 매장 연락처, 매장 이미지</p>
 
-                    <p style={{ marginBottom: '8px' }}><strong>⑤ 거래 발생 시</strong></p>
-                    <p>주문 내역(상품명, 수량, 결제 예정 금액), 리뷰 내용 및 이미지</p>
+                    <p style={{ marginBottom: '8px' }}><strong>⑤ 거래 및 결제 발생 시</strong></p>
+                    <p style={{ marginBottom: '12px' }}>주문 내역(상품명, 수량, 결제 금액), 결제 수단 정보(카드사, 승인번호 — 카드번호 전체는 수집하지 않음), 환불 내역, 리뷰 내용 및 이미지</p>
+
+                    <p style={{ marginBottom: '8px' }}><strong>⑥ 쿠폰·포인트 이용 시</strong></p>
+                    <p>쿠폰 발급/사용 내역, 포인트 적립/사용/차감 내역</p>
                 </Section>
 
                 <Section title="제2조 개인정보의 수집 및 이용 목적">
@@ -69,6 +72,7 @@ export default function PrivacyPage() {
                             ['회원 식별 및 본인 확인', '이메일, 닉네임'],
                             ['위치 기반 주변 매장·상품 검색', '기기 위치정보'],
                             ['주문 처리 및 내역 관리', '주문 정보, 이메일'],
+                            ['결제 처리 및 환불', '결제 수단 정보, 결제 내역'],
                             ['쿠폰·포인트 적립 및 사용', '회원 ID, 거래 내역'],
                             ['리뷰 서비스 제공', '닉네임, 리뷰 내용'],
                             ['고객 문의 및 분쟁 처리', '이메일, 이용 기록'],
@@ -104,6 +108,8 @@ export default function PrivacyPage() {
                             ['Supabase Inc.', '데이터베이스 저장·운영', '회원 탈퇴 시'],
                             ['Vercel Inc.', '서버 호스팅', '서비스 계약 종료 시'],
                             ['Kakao Corp.', '소셜 로그인 인증', '인증 완료 즉시 파기'],
+                            ['(주)토스페이먼츠', '전자결제 처리 및 환불', '전자상거래법에 따름 (5년)'],
+                            ['Google (Firebase)', '푸시 알림 발송', '서비스 계약 종료 시'],
                         ]}
                     />
                 </Section>

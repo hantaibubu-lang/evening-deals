@@ -6,6 +6,8 @@ import { NotificationProvider } from '@/components/NotificationProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import InstallPrompt from '@/components/InstallPrompt';
+import GoogleAnalytics from '@/components/GoogleAnalytics';
+import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/JsonLd';
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://evening-deals.vercel.app'),
@@ -54,18 +56,24 @@ export default function RootLayout({ children }) {
     <html lang="ko" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
+        <OrganizationJsonLd />
+        <WebsiteJsonLd />
       </head>
       <body suppressHydrationWarning>
         <ToastProvider>
           <AuthProvider>
             <NotificationProvider>
               <div className="app-container">
+                <a href="#main-content" className="skip-to-content">본문으로 건너뛰기</a>
                 <Navbar />
-                {children}
+                <div id="main-content">
+                  {children}
+                </div>
                 <BottomBar />
               </div>
               <ServiceWorkerRegister />
               <InstallPrompt />
+              <GoogleAnalytics />
             </NotificationProvider>
           </AuthProvider>
         </ToastProvider>

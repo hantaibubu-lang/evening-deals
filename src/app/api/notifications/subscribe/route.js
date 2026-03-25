@@ -4,8 +4,10 @@ import { verifyAuth } from '@/lib/authServer';
 
 export async function POST(request) {
     try {
-        const user = await verifyAuth(request);
-        if (!user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+        const { profile, error: authError } = await verifyAuth(request);
+        if (authError || !profile) {
+            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
+        }
 
         const { token, platform = 'web' } = await request.json();
         if (!token) return NextResponse.json({ error: 'FCM 토큰이 없습니다.' }, { status: 400 });
@@ -14,7 +16,7 @@ export async function POST(request) {
         const { error } = await supabase
             .from('push_subscriptions')
             .upsert(
-                { user_id: user.id, token, platform, updated_at: new Date().toISOString() },
+                { user_id: profile.id, token, platform, updated_at: new Date().toISOString() },
                 { onConflict: 'user_id,platform' }
             );
 
@@ -28,13 +30,15 @@ export async function POST(request) {
 
 export async function DELETE(request) {
     try {
-        const user = await verifyAuth(request);
-        if (!user) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
+        const { profile, error: authError } = await verifyAuth(request);
+        if (authError || !profile) {
+            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
+        }
 
         await supabase
             .from('push_subscriptions')
             .delete()
-            .eq('user_id', user.id);
+            .eq('user_id', profile.id);
 
         return NextResponse.json({ success: true });
     } catch (e) {

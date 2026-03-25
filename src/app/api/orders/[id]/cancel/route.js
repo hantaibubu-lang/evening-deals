@@ -2,6 +2,33 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
 import { isValidUUID } from '@/utils/validate';
+import { logEvent } from '@/lib/logger';
+
+// 토스페이먼츠 결제 취소 (환불)
+async function cancelTossPayment(paymentKey, cancelReason, cancelAmount) {
+    const secretKey = process.env.TOSS_SECRET_KEY;
+    if (!secretKey || !paymentKey) return null;
+
+    const body = { cancelReason };
+    if (cancelAmount) body.cancelAmount = cancelAmount;
+
+    const res = await fetch(`https://api.tosspayments.com/v1/payments/${paymentKey}/cancel`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString('base64')}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('Toss cancel error:', err);
+        return { error: err.message || '토스 결제 취소 실패' };
+    }
+
+    return await res.json();
+}
 
 // 고객 주문 취소 (PENDING 상태에서만 가능)
 export async function POST(request, { params }) {
@@ -17,10 +44,10 @@ export async function POST(request, { params }) {
             return NextResponse.json({ error: '유효하지 않은 주문 ID입니다.' }, { status: 400 });
         }
 
-        // 주문 조회 (본인 주문인지 확인)
+        // 주문 조회 (본인 주문인지 확인, payment_key 포함)
         const { data: order, error: orderError } = await supabase
             .from('orders')
-            .select('id, user_id, status, product_id, quantity, total_price')
+            .select('id, user_id, status, product_id, quantity, total_price, payment_key')
             .eq('id', orderId)
             .single();
 
@@ -40,7 +67,24 @@ export async function POST(request, { params }) {
             }, { status: 400 });
         }
 
-        // 재고 복구
+        // 1. 토스페이먼츠 결제 환불 (유료 결제인 경우)
+        let refunded = false;
+        if (order.payment_key && order.total_price > 0) {
+            const tossResult = await cancelTossPayment(
+                order.payment_key,
+                '고객 요청에 의한 주문 취소'
+            );
+
+            if (tossResult?.error) {
+                return NextResponse.json(
+                    { error: `환불 처리에 실패했습니다: ${tossResult.error}` },
+                    { status: 500 }
+                );
+            }
+            refunded = true;
+        }
+
+        // 2. 재고 복구
         const { data: product } = await supabase
             .from('products')
             .select('quantity')
@@ -57,7 +101,7 @@ export async function POST(request, { params }) {
                 .eq('id', order.product_id);
         }
 
-        // 포인트 차감 (적립된 1% 회수)
+        // 3. 포인트 차감 (적립된 1% 회수)
         const pointsToDeduct = Math.floor(order.total_price * 0.01);
         if (pointsToDeduct > 0) {
             await supabase
@@ -69,7 +113,22 @@ export async function POST(request, { params }) {
                 .eq('id', profile.id);
         }
 
-        // 주문 상태 변경
+        // 4. 쿠폰 복구 (사용한 쿠폰이 있는 경우)
+        const { data: usedCoupon } = await supabase
+            .from('user_coupons')
+            .select('id')
+            .eq('order_id', orderId)
+            .eq('is_used', true)
+            .maybeSingle();
+
+        if (usedCoupon) {
+            await supabase
+                .from('user_coupons')
+                .update({ is_used: false, used_at: null, order_id: null })
+                .eq('id', usedCoupon.id);
+        }
+
+        // 5. 주문 상태 변경
         const { data, error } = await supabase
             .from('orders')
             .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
@@ -79,7 +138,14 @@ export async function POST(request, { params }) {
 
         if (error) throw error;
 
-        return NextResponse.json({ success: true, order: data });
+        logEvent('order_cancelled', {
+            userId: profile.id,
+            orderId,
+            refunded,
+            amount: order.total_price,
+        });
+
+        return NextResponse.json({ success: true, order: data, refunded });
     } catch (e) {
         console.error('Order cancel error:', e);
         return NextResponse.json({ error: '주문 취소에 실패했습니다.' }, { status: 500 });

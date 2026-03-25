@@ -39,6 +39,20 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://*.kakao.com https://www.googletagmanager.com https://js.tosspayments.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.kakao.com https://*.daumcdn.net https://www.googletagmanager.com",
+              "connect-src 'self' https://*.supabase.co https://*.supabase.in https://dapi.kakao.com https://fcm.googleapis.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://api.tosspayments.com",
+              "frame-src 'self' https://*.kakao.com https://*.tosspayments.com",
+              "worker-src 'self' blob:",
+            ].join('; ')
+          },
         ],
       },
     ];
@@ -49,14 +63,11 @@ export default withSentryConfig(nextConfig, {
   org: 'dangeun',
   project: 'javascript-nextjs',
 
-  // 소스맵 업로드 비활성화 (Sentry Auth Token 없이 빌드 가능)
+  // SENTRY_AUTH_TOKEN이 있을 때만 소스맵 업로드 (프로덕션 배포용)
   sourcemaps: {
-    disable: true,
+    disable: !process.env.SENTRY_AUTH_TOKEN,
   },
 
   // 빌드 로그 숨김
   silent: true,
-
-  // 터보팩 사용 시 webpack 플러그인 비활성화
-  disableLogger: true,
 });

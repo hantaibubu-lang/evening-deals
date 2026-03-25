@@ -39,4 +39,33 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# secrets / keys
 firebase_key_value.txt
+*.p12
+*.key
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# lighthouse
+.lighthouseci/
+
+# sentry
+.sentryclirc
+
+# editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# os
+Thumbs.db
+
+# logs
+dev_log.txt
+lint_errors.txt

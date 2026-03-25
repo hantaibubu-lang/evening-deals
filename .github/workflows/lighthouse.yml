@@ -1,0 +1,82 @@
+name: Lighthouse CI
+
+on:
+  # CI/CD 워크플로우 배포 완료 후 실행
+  workflow_run:
+    workflows: ['CI/CD']
+    types: [completed]
+    branches: [main]
+
+  # 수동 실행도 가능
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to audit'
+        required: false
+        default: 'https://evening-deals.vercel.app'
+
+jobs:
+  lighthouse:
+    name: Lighthouse Audit
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Lighthouse CI
+        run: npm i -g @lhci/cli@0.14.x
+
+      - name: Run Lighthouse
+        run: |
+          lhci autorun \
+            --collect.url="${{ inputs.url || 'https://evening-deals.vercel.app' }}" \
+            --collect.url="${{ inputs.url || 'https://evening-deals.vercel.app' }}/search" \
+            --collect.url="${{ inputs.url || 'https://evening-deals.vercel.app' }}/login" \
+            --collect.numberOfRuns=3 \
+            --collect.settings.preset=desktop \
+            --collect.settings.chromeFlags="--no-sandbox" \
+            --upload.target=temporary-public-storage \
+            --assert.preset=lighthouse:recommended \
+            --assert.assertions.categories:performance=off \
+            --assert.assertions.categories:accessibility=off \
+            --assert.assertions.categories:best-practices=off \
+            --assert.assertions.categories:seo=off || true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci/
+          retention-days: 14
+
+      - name: Parse and comment scores
+        if: always()
+        run: |
+          echo "## Lighthouse Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          for file in .lighthouseci/lhr-*.json; do
+            if [ -f "$file" ]; then
+              URL=$(node -e "const r=require('./$file'); console.log(r.finalUrl || r.requestedUrl)")
+              PERF=$(node -e "const r=require('./$file'); console.log(Math.round((r.categories.performance?.score||0)*100))")
+              A11Y=$(node -e "const r=require('./$file'); console.log(Math.round((r.categories.accessibility?.score||0)*100))")
+              BP=$(node -e "const r=require('./$file'); console.log(Math.round((r.categories['best-practices']?.score||0)*100))")
+              SEO=$(node -e "const r=require('./$file'); console.log(Math.round((r.categories.seo?.score||0)*100))")
+
+              echo "### $URL" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Category | Score |" >> "$GITHUB_STEP_SUMMARY"
+              echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Performance | $PERF |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Accessibility | $A11Y |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| Best Practices | $BP |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| SEO | $SEO |" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done

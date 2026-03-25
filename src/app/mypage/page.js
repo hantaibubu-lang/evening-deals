@@ -244,6 +244,18 @@ export default function MyPage() {
                 <button onClick={async () => { await signOut(); router.push('/login'); }} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', width: 'fit-content', margin: '0 auto' }}>
                     로그아웃
                 </button>
+
+                {/* 법적 고지 링크 */}
+                <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <Link href="/terms" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'none' }}>이용약관</Link>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>|</span>
+                    <Link href="/privacy" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textDecoration: 'none', fontWeight: '600' }}>개인정보처리방침</Link>
+                </div>
+                <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
+                    <p>저녁떨이 | 경상남도 김해시</p>
+                    <p>고객센터: support@eveningdeals.com</p>
+                    <p style={{ marginTop: '4px' }}>© 2026 저녁떨이 All rights reserved.</p>
+                </div>
             </div>
 
         </main>

@@ -64,7 +64,7 @@ export default function History() {
 
             if (res.ok) {
                 setOrderHistory(prev => prev.map(o => o.id === orderId ? { ...o, status: 'CANCELLED' } : o));
-                showToast('주문이 취소되었습니다.');
+                showToast(data.refunded ? '주문이 취소되고 결제가 환불되었습니다.' : '주문이 취소되었습니다.');
             } else {
                 showToast(data.error || '취소에 실패했습니다.', 'error');
             }

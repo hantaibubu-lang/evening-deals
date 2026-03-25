@@ -37,22 +37,41 @@ export async function POST(request) {
             return NextResponse.json({ error: '파일 크기는 5MB 이하만 가능합니다.' }, { status: 400 });
         }
 
-        // 파일명 생성: folder/userId/timestamp_random.ext
-        const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        // 파일명 생성: folder/userId/timestamp_random.webp
         const timestamp = Date.now();
         const random = Math.random().toString(36).substring(2, 8);
-        const filePath = `${folder}/${profile.id}/${timestamp}_${random}.${ext}`;
+        const filePath = `${folder}/${profile.id}/${timestamp}_${random}.webp`;
 
         // ArrayBuffer로 변환
         const arrayBuffer = await file.arrayBuffer();
-        const buffer = new Uint8Array(arrayBuffer);
+        const inputBuffer = Buffer.from(arrayBuffer);
 
-        // Supabase Storage 업로드
+        // sharp를 사용한 이미지 최적화 (리사이징 + WebP 변환)
+        let optimizedBuffer;
+        let contentType = 'image/webp';
+        try {
+            const sharp = (await import('sharp')).default;
+            optimizedBuffer = await sharp(inputBuffer)
+                .resize({
+                    width: 1200,
+                    height: 1200,
+                    fit: 'inside',
+                    withoutEnlargement: true,
+                })
+                .webp({ quality: 80 })
+                .toBuffer();
+        } catch (sharpError) {
+            console.warn('Sharp 최적화 실패, 원본 업로드:', sharpError.message);
+            optimizedBuffer = new Uint8Array(arrayBuffer);
+            contentType = file.type;
+        }
+
+        // Supabase Storage 업로드 (1년 캐시)
         const { data, error } = await supabaseAdmin.storage
             .from(BUCKET_NAME)
-            .upload(filePath, buffer, {
-                contentType: file.type,
-                cacheControl: '3600',
+            .upload(filePath, optimizedBuffer, {
+                contentType,
+                cacheControl: '31536000',
                 upsert: false,
             });
 

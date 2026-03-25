@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase';
+import { LocalBusinessJsonLd } from '@/components/JsonLd';
 
 export async function generateMetadata({ params }) {
     const { id } = await params;
@@ -25,6 +26,22 @@ export async function generateMetadata({ params }) {
     }
 }
 
-export default function StoreLayout({ children }) {
-    return children;
+export default async function StoreLayout({ children, params }) {
+    const { id } = await params;
+    let store = null;
+    try {
+        const { data } = await supabaseAdmin
+            .from('stores')
+            .select('id, name, address, description, phone_number')
+            .eq('id', id)
+            .single();
+        store = data;
+    } catch {}
+
+    return (
+        <>
+            <LocalBusinessJsonLd store={store} />
+            {children}
+        </>
+    );
 }

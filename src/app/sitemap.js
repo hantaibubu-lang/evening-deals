@@ -9,6 +9,9 @@ export default async function sitemap() {
         { url: `${baseUrl}/search`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
         { url: `${baseUrl}/login`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
         { url: `${baseUrl}/signup`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
+        { url: `${baseUrl}/terms`, lastModified: '2026-03-26', changeFrequency: 'yearly', priority: 0.3 },
+        { url: `${baseUrl}/privacy`, lastModified: '2026-03-26', changeFrequency: 'yearly', priority: 0.3 },
+        { url: `${baseUrl}/refund-policy`, lastModified: '2026-03-26', changeFrequency: 'yearly', priority: 0.3 },
     ];
 
     try {
