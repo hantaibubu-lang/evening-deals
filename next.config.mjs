@@ -21,6 +21,14 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/firebase-messaging-sw.js',
+        destination: '/api/firebase-messaging-sw',
+      },
+    ];
+  },
   async headers() {
     return [
       {

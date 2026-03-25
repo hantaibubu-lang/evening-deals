@@ -33,6 +33,15 @@ function HomeContent() {
   const [currentLocationName, setCurrentLocationName] = useState('위치 파악 중...');
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 온보딩 완료 여부 체크 (첫 방문 시 온보딩으로 이동)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('onboarding_done') !== 'true') {
+        router.replace('/onboarding');
+      }
+    } catch { /* ignore */ }
+  }, [router]);
   const [productRadius, setProductRadius] = useState(10);
   const [userCoords, setUserCoords] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
+import { useNotification } from '@/components/NotificationProvider';
 
 const DEFAULT_SETTINGS = {
     discountAlert: true,
@@ -11,6 +12,7 @@ const DEFAULT_SETTINGS = {
 
 export default function NotificationSettings() {
     const { showToast } = useToast();
+    const { permission, requestPermission } = useNotification();
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loaded, setLoaded] = useState(false);
 
@@ -33,6 +35,9 @@ export default function NotificationSettings() {
 
     if (!loaded) return null;
 
+    const permissionColor = { granted: 'var(--success, #28a745)', denied: '#dc3545', default: 'var(--text-muted)' }[permission] || 'var(--text-muted)';
+    const permissionLabel = { granted: '허용됨', denied: '차단됨', default: '미설정' }[permission] || '미설정';
+
     return (
         <main className="page-content" style={{ minHeight: '100vh', paddingBottom: '80px' }}>
             <header style={{ display: 'flex', alignItems: 'center', padding: '16px', borderBottom: '1px solid var(--border-color)' }}>
@@ -45,6 +50,32 @@ export default function NotificationSettings() {
             </header>
 
             <div style={{ padding: '16px' }}>
+                {/* FCM 권한 요청 카드 */}
+                <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '20px', marginBottom: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: '700', fontSize: '1rem' }}>🔔 푸시 알림</span>
+                        <span style={{ fontSize: '0.85rem', fontWeight: '600', color: permissionColor }}>{permissionLabel}</span>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+                        마감 임박 상품, 단골 마트 할인 등을 실시간으로 받아보세요.
+                    </p>
+                    {permission !== 'granted' && (
+                        <button
+                            onClick={requestPermission}
+                            disabled={permission === 'denied'}
+                            style={{
+                                width: '100%', padding: '12px', borderRadius: '8px', border: 'none',
+                                backgroundColor: permission === 'denied' ? '#f5f5f5' : 'var(--primary)',
+                                color: permission === 'denied' ? 'var(--text-muted)' : '#fff',
+                                fontWeight: '700', fontSize: '0.95rem',
+                                cursor: permission === 'denied' ? 'default' : 'pointer',
+                            }}
+                        >
+                            {permission === 'denied' ? '브라우저 설정에서 알림을 허용해주세요' : '알림 허용하기'}
+                        </button>
+                    )}
+                </div>
+
                 <ToggleItem
                     label="할인 상품 알림"
                     desc="내 주변 마트에 새 할인 상품이 등록되면 알림"
