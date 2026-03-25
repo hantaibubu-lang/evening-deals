@@ -1,4 +1,9 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import withBundleAnalyzer from '@next/bundle-analyzer';
+
+const analyzeBundles = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -45,8 +50,8 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://*.kakao.com https://www.googletagmanager.com https://js.tosspayments.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "font-src 'self' https://fonts.gstatic.com",
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
               "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://images.unsplash.com https://*.kakao.com https://*.daumcdn.net https://www.googletagmanager.com",
               "connect-src 'self' https://*.supabase.co https://*.supabase.in https://dapi.kakao.com https://fcm.googleapis.com https://www.google-analytics.com https://analytics.google.com https://*.google-analytics.com https://api.tosspayments.com",
               "frame-src 'self' https://*.kakao.com https://*.tosspayments.com",
@@ -59,7 +64,7 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(analyzeBundles(nextConfig), {
   org: 'dangeun',
   project: 'javascript-nextjs',
 

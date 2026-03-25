@@ -54,11 +54,13 @@ export default function SearchPage() {
         }
     }, []);
 
-    const saveRecentSearch = (term) => {
-        const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 10);
-        setRecentSearches(updated);
-        try { localStorage.setItem('recent_searches', JSON.stringify(updated)); } catch {};
-    };
+    const saveRecentSearch = useCallback((term) => {
+        setRecentSearches(prev => {
+            const updated = [term, ...prev.filter(s => s !== term)].slice(0, 10);
+            try { localStorage.setItem('recent_searches', JSON.stringify(updated)); } catch {};
+            return updated;
+        });
+    }, []);
 
     // 자동완성 디바운스
     const acTimerRef = useRef(null);
@@ -123,7 +125,7 @@ export default function SearchPage() {
             setIsSearching(false);
             setLoadingMore(false);
         }
-    }, [userCoords]);
+    }, [userCoords, saveRecentSearch]);
 
     const handleSearch = () => doSearch(query, category, sort);
 

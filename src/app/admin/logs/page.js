@@ -3,21 +3,15 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function LogsViewer() {
-    const [logs, setLogs] = useState([]);
+    const [logs] = useState(() => [
+        { id: 101, type: 'ERROR', message: 'Failed to access Supabase Edge Function: Timeout', time: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+        { id: 102, type: 'INFO', message: 'User admin@eveningdeals.com logged in successfully', time: new Date(Date.now() - 1000 * 60 * 12).toISOString() },
+        { id: 103, type: 'WARN', message: 'High latency detected on /api/products/nearby', time: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
+        { id: 104, type: 'INFO', message: 'New store [Demo Mart] created by user (id: a1b2c3d4)', time: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+        { id: 105, type: 'ERROR', message: 'Stripe webhook verification failed signature mismatch', time: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
+        { id: 106, type: 'INFO', message: 'Cron job [ClearExpiredProducts] completed. Deleted 12 items.', time: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+    ]);
     const [filter, setFilter] = useState('ALL');
-
-    useEffect(() => {
-        // Mocking System Logs
-        const mockLogs = [
-            { id: 101, type: 'ERROR', message: 'Failed to access Supabase Edge Function: Timeout', time: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-            { id: 102, type: 'INFO', message: 'User admin@eveningdeals.com logged in successfully', time: new Date(Date.now() - 1000 * 60 * 12).toISOString() },
-            { id: 103, type: 'WARN', message: 'High latency detected on /api/products/nearby', time: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
-            { id: 104, type: 'INFO', message: 'New store [Demo Mart] created by user (id: a1b2c3d4)', time: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-            { id: 105, type: 'ERROR', message: 'Stripe webhook verification failed signature mismatch', time: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString() },
-            { id: 106, type: 'INFO', message: 'Cron job [ClearExpiredProducts] completed. Deleted 12 items.', time: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-        ];
-        setLogs(mockLogs);
-    }, []);
 
     const filteredLogs = filter === 'ALL' ? logs : logs.filter(l => l.type === filter);
 

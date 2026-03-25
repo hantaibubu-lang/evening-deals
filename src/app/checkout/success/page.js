@@ -7,25 +7,38 @@ import SponsorBanner from '@/components/SponsorBanner';
 export default function CheckoutSuccessPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [status, setStatus] = useState('loading'); // loading | success | error
+    const hasPayment = searchParams.get('paymentKey') && searchParams.get('orderId');
+    const orderId = searchParams.get('orderId');
+    const [status, setStatus] = useState(() => {
+        if (!hasPayment) return 'success';
+        if (typeof window === 'undefined') return 'loading';
+        try {
+            const raw = sessionStorage.getItem(`pending_${orderId}`);
+            if (!raw) return 'error';
+        } catch { /* ignore */ }
+        return 'loading';
+    });
     const [earnedPoints, setEarnedPoints] = useState(0);
-    const [errorMsg, setErrorMsg] = useState('');
-    const pickupNumber = useRef(Math.floor(100 + Math.random() * 900)).current;
+    const [errorMsg, setErrorMsg] = useState(() => {
+        if (!hasPayment || typeof window === 'undefined') return '';
+        try {
+            const raw = sessionStorage.getItem(`pending_${orderId}`);
+            if (!raw) return '결제 정보를 찾을 수 없습니다. 주문 내역을 확인해주세요.';
+        } catch { /* ignore */ }
+        return '';
+    });
+    const [pickupNumber] = useState(() => Math.floor(100 + Math.random() * 900));
     const confirmedRef = useRef(false);
 
     useEffect(() => {
         if (confirmedRef.current) return;
         confirmedRef.current = true;
+        if (status !== 'loading') return;
 
         const paymentKey = searchParams.get('paymentKey');
-        const orderId = searchParams.get('orderId');
         const amount = parseInt(searchParams.get('amount') || '0', 10);
 
-        // paymentKey 없음 = 0원 결제 또는 직접 접근
-        if (!paymentKey || !orderId) {
-            setStatus('success');
-            return;
-        }
+        if (!paymentKey || !orderId) return;
 
         // sessionStorage에서 주문 정보 복원
         let pendingOrder = null;
@@ -34,11 +47,7 @@ export default function CheckoutSuccessPage() {
             if (raw) pendingOrder = JSON.parse(raw);
         } catch { /* ignore */ }
 
-        if (!pendingOrder) {
-            setStatus('error');
-            setErrorMsg('결제 정보를 찾을 수 없습니다. 주문 내역을 확인해주세요.');
-            return;
-        }
+        if (!pendingOrder) return;
 
         // 결제 확인 API 호출
         fetchWithAuth('/api/payments/confirm', {
@@ -60,7 +69,7 @@ export default function CheckoutSuccessPage() {
             setErrorMsg('네트워크 오류가 발생했습니다. 주문 내역을 확인해주세요.');
             setStatus('error');
         });
-    }, [searchParams]);
+    }, [searchParams, status, orderId]);
 
     if (status === 'loading') {
         return (

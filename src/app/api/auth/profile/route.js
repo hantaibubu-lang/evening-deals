@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { apiSuccess, ApiErrors } from '@/lib/apiResponse';
 
 // 회원가입 시 users 테이블에 프로필 생성
 export async function POST(request) {
@@ -8,7 +8,7 @@ export async function POST(request) {
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!email || !emailRegex.test(email.trim())) {
-            return NextResponse.json({ error: '유효한 이메일 주소가 필요합니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효한 이메일 주소가 필요합니다.');
         }
 
         // 이미 존재하는지 확인
@@ -19,7 +19,7 @@ export async function POST(request) {
             .single();
 
         if (existing) {
-            return NextResponse.json({ message: '이미 프로필이 존재합니다.', userId: existing.id });
+            return apiSuccess({ message: '이미 프로필이 존재합니다.', userId: existing.id });
         }
 
         // 프로필 생성
@@ -38,9 +38,9 @@ export async function POST(request) {
 
         if (error) throw error;
 
-        return NextResponse.json({ message: '프로필 생성 완료', user: data }, { status: 201 });
+        return apiSuccess({ message: '프로필 생성 완료', user: data }, 201);
     } catch (e) {
         console.error('Auth profile creation error:', e);
-        return NextResponse.json({ error: '프로필 생성 실패' }, { status: 500 });
+        return ApiErrors.server('프로필 생성 실패');
     }
 }

@@ -10,34 +10,34 @@ export default function Navbar() {
     const pathname = usePathname();
     const router = useRouter();
     const { isAuthenticated, profile, role, signOut } = useAuth();
-    const [locationAddress, setLocationAddress] = useState('위치 찾는 중...');
+    const [locationAddress, setLocationAddress] = useState(() => {
+        if (typeof window !== 'undefined' && !('geolocation' in navigator)) return '위치 지원 안됨';
+        return '위치 찾는 중...';
+    });
     const [showProfileMenu, setShowProfileMenu] = useState(false);
 
     useEffect(() => {
-        if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const { latitude, longitude } = position.coords;
-                    try {
-                        const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            setLocationAddress(data.locationName || '위치 확인됨');
-                        } else {
-                            setLocationAddress(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
-                        }
-                    } catch {
+        if (!('geolocation' in navigator)) return;
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                try {
+                    const res = await fetch(`/api/geocode?lat=${latitude}&lng=${longitude}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        setLocationAddress(data.locationName || '위치 확인됨');
+                    } else {
                         setLocationAddress(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
                     }
-                },
-                () => {
-                    setLocationAddress('위치 알 수 없음');
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        } else {
-            setLocationAddress('위치 지원 안됨');
-        }
+                } catch {
+                    setLocationAddress(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+                }
+            },
+            () => {
+                setLocationAddress('위치 알 수 없음');
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
     }, []);
 
     // Don't show on auth pages

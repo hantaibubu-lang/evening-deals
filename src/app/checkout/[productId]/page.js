@@ -51,7 +51,7 @@ export default function CheckoutPage() {
             }
         };
         fetchData();
-    }, [productId]);
+    }, [productId, router, showToast]);
 
     if (isLoading) {
         return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontWeight: 'bold', color: 'var(--primary)' }}>결제 정보를 로딩 중입니다...</div>;

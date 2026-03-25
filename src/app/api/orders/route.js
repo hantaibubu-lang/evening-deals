@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
 import { isValidUUID, safeParseInt } from '@/utils/validate';
 import { checkRateLimit } from '@/lib/rateLimit';
+import { apiSuccess, apiError, ApiErrors } from '@/lib/apiResponse';
 
 export async function POST(request) {
     try {
@@ -13,7 +13,7 @@ export async function POST(request) {
         // 인증 체크
         const { profile, error: authError } = await verifyAuth(request);
         if (authError || !profile) {
-            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
+            return ApiErrors.unauthorized(authError);
         }
 
         const body = await request.json();
@@ -21,18 +21,18 @@ export async function POST(request) {
 
         // 입력 유효성 검사
         if (!productId || !isValidUUID(productId)) {
-            return NextResponse.json({ error: '유효하지 않은 상품 ID입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 상품 ID입니다.');
         }
         if (!storeId || !isValidUUID(storeId)) {
-            return NextResponse.json({ error: '유효하지 않은 매장 ID입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 매장 ID입니다.');
         }
         const orderQuantity = safeParseInt(quantity, 1, 100);
         if (!orderQuantity) {
-            return NextResponse.json({ error: '수량은 1~100 사이 정수여야 합니다.' }, { status: 400 });
+            return ApiErrors.badRequest('수량은 1~100 사이 정수여야 합니다.');
         }
         const parsedTotalPrice = safeParseInt(totalPrice, 100, 100000000);
         if (!parsedTotalPrice) {
-            return NextResponse.json({ error: '유효하지 않은 결제 금액입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 결제 금액입니다.');
         }
 
         // RPC로 원자적 주문 처리
@@ -54,18 +54,17 @@ export async function POST(request) {
         }
 
         if (!result.success) {
-            return NextResponse.json({ error: result.error }, { status: 400 });
+            return ApiErrors.badRequest(result.error);
         }
 
-        return NextResponse.json({
-            success: true,
+        return apiSuccess({
             order: { id: result.order_id },
             earnedPoints: result.earned_points
         });
 
     } catch (e) {
         console.error('Order API error:', e);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return ApiErrors.server();
     }
 }
 
@@ -78,7 +77,7 @@ async function fallbackOrder(userId, storeId, productId, quantity, totalPrice) {
         .single();
 
     if (!product || product.quantity < quantity || product.status !== 'active') {
-        return NextResponse.json({ error: '재고가 부족하거나 판매 중이 아닌 상품입니다.' }, { status: 400 });
+        return ApiErrors.badRequest('재고가 부족하거나 판매 중이 아닌 상품입니다.');
     }
 
     const { data: order, error: orderError } = await supabase
@@ -105,5 +104,5 @@ async function fallbackOrder(userId, storeId, productId, quantity, totalPrice) {
         .eq('id', productId)
         .gte('quantity', quantity);
 
-    return NextResponse.json({ success: true, order });
+    return apiSuccess({ order });
 }

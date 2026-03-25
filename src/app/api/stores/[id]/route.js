@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
+import { ApiErrors } from '@/lib/apiResponse';
 
 export async function GET(request, { params }) {
     const { id } = params;
@@ -32,7 +33,7 @@ export async function GET(request, { params }) {
 
         const store = storeRes.data;
         if (storeRes.error || !store) {
-            return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+            return ApiErrors.notFound('Store not found');
         }
 
         const reviews = reviewsRes.data || [];
@@ -75,9 +76,11 @@ export async function GET(request, { params }) {
             })),
         };
 
-        return NextResponse.json(formattedStore);
+        const response = NextResponse.json(formattedStore);
+        response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+        return response;
     } catch (e) {
         console.error('Store detail error:', e);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return ApiErrors.server();
     }
 }

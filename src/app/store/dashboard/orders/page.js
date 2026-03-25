@@ -37,7 +37,7 @@ export default function StoreOrdersDashboard() {
             }
         };
         fetchOrders();
-    }, []);
+    }, [showToast]);
 
     // 실시간 신규 주문 구독
     useRealtimeNewOrders(storeId, () => {

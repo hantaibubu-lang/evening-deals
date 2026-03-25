@@ -35,7 +35,7 @@ export default function OrderDetail({ params }) {
             }
         }
         fetchOrder();
-    }, [id]);
+    }, [id, showToast]);
 
     const handleStatusChange = async (newStatus) => {
         if (isUpdating) return;

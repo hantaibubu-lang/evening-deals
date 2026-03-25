@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/utils/apiAuth';
 import { useToast } from '@/components/Toast';
@@ -16,15 +16,15 @@ export default function SettlementsPage() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [actionLoading, setActionLoading] = useState(null);
 
-    const fetchSettlements = async () => {
+    const fetchSettlements = useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await fetchWithAuth(`/api/admin/settlements?month=${month}&status=${statusFilter}`);
             if (res.ok) setData(await res.json());
         } catch {} finally { setIsLoading(false); }
-    };
+    }, [month, statusFilter]);
 
-    useEffect(() => { fetchSettlements(); }, [month, statusFilter]);
+    useEffect(() => { fetchSettlements(); }, [fetchSettlements]);
 
     const handleSettle = async (storeId, action) => {
         const label = action === 'complete' ? '정산 완료' : '정산 취소';

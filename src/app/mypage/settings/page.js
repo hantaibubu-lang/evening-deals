@@ -3,18 +3,19 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function AppSettings() {
-    const [darkMode, setDarkMode] = useState(false);
+    const [darkMode, setDarkMode] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return localStorage.getItem('darkMode') === 'true';
+    });
     const [pushNotif, setPushNotif] = useState(true);
 
     useEffect(() => {
-        const isDark = localStorage.getItem('darkMode') === 'true';
-        setDarkMode(isDark);
-        if (isDark) {
+        if (darkMode) {
             document.documentElement.setAttribute('data-theme', 'dark');
         } else {
             document.documentElement.removeAttribute('data-theme');
         }
-    }, []);
+    }, [darkMode]);
 
     const toggleDarkMode = () => {
         const newMode = !darkMode;

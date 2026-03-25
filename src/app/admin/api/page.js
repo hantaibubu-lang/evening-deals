@@ -14,15 +14,14 @@ export default function ApiManagement() {
     useEffect(() => {
         // Mocking API Health Check
         const checkApis = () => {
-            const updated = apis.map(api => {
+            setApis(prev => prev.map(api => {
                 const isHealthy = Math.random() > 0.05; // 95% pass rate
                 return {
                     ...api,
                     status: isHealthy ? '200 OK' : '503 ERR',
                     latency: isHealthy ? `${Math.floor(Math.random() * 80) + 20}ms` : 'Timeout'
                 };
-            });
-            setApis(updated);
+            }));
         };
         setTimeout(checkApis, 1000);
     }, []);

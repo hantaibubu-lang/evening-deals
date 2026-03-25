@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth, requireRole } from '@/lib/authServer';
 import { sanitizeString, isValidLength, isOneOf } from '@/utils/validate';
+import { apiSuccess, apiError, ApiErrors } from '@/lib/apiResponse';
 
 const ALLOWED_CATEGORIES = ['mart', 'restaurant', 'bakery', 'meat', 'vegetable', 'seafood', 'dairy'];
 
@@ -10,11 +11,11 @@ export async function POST(request) {
     try {
         const { profile, error: authError } = await verifyAuth(request);
         if (authError || !profile) {
-            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
+            return ApiErrors.unauthorized(authError);
         }
 
         if (profile.role !== 'store_manager' && profile.role !== 'admin') {
-            return NextResponse.json({ error: '사장님 계정으로만 가게를 등록할 수 있습니다.' }, { status: 403 });
+            return ApiErrors.forbidden('사장님 계정으로만 가게를 등록할 수 있습니다.');
         }
 
         // 이미 등록된 가게가 있는지 확인
@@ -25,20 +26,20 @@ export async function POST(request) {
             .limit(1);
 
         if (existing && existing.length > 0) {
-            return NextResponse.json({ error: '이미 등록된 가게가 있습니다.' }, { status: 400 });
+            return ApiErrors.badRequest('이미 등록된 가게가 있습니다.');
         }
 
         const body = await request.json();
         const { name, address, lat, lng, category, phone, emoji } = body;
 
         if (!name || !isValidLength(name, 1, 100)) {
-            return NextResponse.json({ error: '가게 이름은 1~100자 이내로 입력해주세요.' }, { status: 400 });
+            return ApiErrors.badRequest('가게 이름은 1~100자 이내로 입력해주세요.');
         }
         if (!address || !isValidLength(address, 1, 300)) {
-            return NextResponse.json({ error: '주소를 입력해주세요.' }, { status: 400 });
+            return ApiErrors.badRequest('주소를 입력해주세요.');
         }
         if (category && !isOneOf(category, ALLOWED_CATEGORIES)) {
-            return NextResponse.json({ error: '유효하지 않은 카테고리입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 카테고리입니다.');
         }
 
         const { data, error } = await supabase
@@ -59,10 +60,10 @@ export async function POST(request) {
 
         if (error) throw error;
 
-        return NextResponse.json({ success: true, store: data }, { status: 201 });
+        return apiSuccess({ store: data }, 201);
     } catch (e) {
         console.error('Store registration error:', e);
-        return NextResponse.json({ error: '가게 등록에 실패했습니다.' }, { status: 500 });
+        return ApiErrors.server('가게 등록에 실패했습니다.');
     }
 }
 
@@ -71,7 +72,7 @@ export async function GET(request) {
     try {
         const { profile, error: authError, status } = await requireRole(request, ['admin']);
         if (authError) {
-            return NextResponse.json({ error: authError }, { status });
+            return apiError(authError, status);
         }
 
         const { searchParams } = new URL(request.url);
@@ -92,10 +93,12 @@ export async function GET(request) {
         const { data, error } = await query;
         if (error) throw error;
 
-        return NextResponse.json(data);
+        const response = NextResponse.json(data);
+        response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+        return response;
     } catch (e) {
         console.error('Stores fetch error:', e);
-        return NextResponse.json({ error: 'Failed to fetch stores' }, { status: 500 });
+        return ApiErrors.server('Failed to fetch stores');
     }
 }
 
@@ -104,14 +107,14 @@ export async function PATCH(request) {
     try {
         const { profile, error: authError, status } = await requireRole(request, ['admin']);
         if (authError) {
-            return NextResponse.json({ error: authError }, { status });
+            return apiError(authError, status);
         }
 
         const body = await request.json();
         const { storeId, action, rejectReason } = body; // action: 'approve' | 'reject'
 
         if (!storeId || !['approve', 'reject'].includes(action)) {
-            return NextResponse.json({ error: '유효하지 않은 요청입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 요청입니다.');
         }
 
         const newStatus = action === 'approve' ? 'approved' : 'rejected';
@@ -140,9 +143,9 @@ export async function PATCH(request) {
                 .eq('id', data.owner.id);
         }
 
-        return NextResponse.json({ success: true, store: data });
+        return apiSuccess({ store: data });
     } catch (e) {
         console.error('Store approval error:', e);
-        return NextResponse.json({ error: '처리에 실패했습니다.' }, { status: 500 });
+        return ApiErrors.server('처리에 실패했습니다.');
     }
 }

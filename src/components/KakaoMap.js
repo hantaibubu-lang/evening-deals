@@ -40,77 +40,9 @@ export default function KakaoMap({ lat, lng, stores = [] }) {
     const mapRef = useRef(null);
     const markersRef = useRef([]);
     const overlaysRef = useRef([]);
-    const [sdkFailed, setSdkFailed] = useState(false);
+    const [sdkFailed, setSdkFailed] = useState(!KAKAO_MAP_KEY);
 
-    // 지도 초기화
-    useEffect(() => {
-        console.log('[KakaoMap] KEY:', KAKAO_MAP_KEY ? 'loaded' : 'MISSING');
-        if (!KAKAO_MAP_KEY) {
-            setSdkFailed(true);
-            return;
-        }
-
-        const centerLat = lat || 35.2340;
-        const centerLng = lng || 128.8820;
-
-        loadKakaoSDK()
-            .then((kakao) => {
-                if (!mapContainerRef.current) return;
-
-                const options = {
-                    center: new kakao.maps.LatLng(centerLat, centerLng),
-                    level: 5,
-                };
-                const map = new kakao.maps.Map(mapContainerRef.current, options);
-                mapRef.current = map;
-
-                // 줌 컨트롤
-                map.addControl(
-                    new kakao.maps.ZoomControl(),
-                    kakao.maps.ControlPosition.RIGHT
-                );
-
-                // 내 위치 마커 (커스텀 오버레이)
-                if (lat && lng) {
-                    const myLocationContent = `
-                        <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-                            <div style="width:36px;height:36px;background:rgba(255,122,0,0.15);border-radius:50%;animation:pulse 2s infinite;position:absolute;"></div>
-                            <div style="width:14px;height:14px;background:#FF7A00;border-radius:50%;border:3px solid #fff;box-shadow:0 0 8px rgba(0,0,0,0.25);position:relative;z-index:1;"></div>
-                        </div>
-                    `;
-                    new kakao.maps.CustomOverlay({
-                        position: new kakao.maps.LatLng(lat, lng),
-                        content: myLocationContent,
-                        yAnchor: 0.5,
-                        xAnchor: 0.5,
-                        map: map,
-                    });
-                }
-
-                // 가게 마커 추가
-                addStoreMarkers(kakao, map, stores);
-            })
-            .catch((err) => {
-                console.error('[KakaoMap] SDK init failed:', err);
-                setSdkFailed(true);
-            });
-
-        return () => {
-            // cleanup markers & overlays
-            markersRef.current.forEach(m => m.setMap(null));
-            overlaysRef.current.forEach(o => o.setMap(null));
-            markersRef.current = [];
-            overlaysRef.current = [];
-        };
-    }, [lat, lng]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // stores 변경 시 마커 업데이트
-    useEffect(() => {
-        if (!mapRef.current || !window.kakao) return;
-        addStoreMarkers(window.kakao, mapRef.current, stores);
-    }, [stores]);
-
-    function addStoreMarkers(kakao, map, storeList) {
+    const addStoreMarkers = (kakao, map, storeList) => {
         // 기존 마커 정리
         markersRef.current.forEach(m => m.setMap(null));
         overlaysRef.current.forEach(o => o.setMap(null));
@@ -186,7 +118,72 @@ export default function KakaoMap({ lat, lng, stores = [] }) {
                 overlay.setMap(map);
             });
         });
-    }
+    };
+
+    // 지도 초기화
+    useEffect(() => {
+        console.log('[KakaoMap] KEY:', KAKAO_MAP_KEY ? 'loaded' : 'MISSING');
+        if (!KAKAO_MAP_KEY) return;
+
+        const centerLat = lat || 35.2340;
+        const centerLng = lng || 128.8820;
+
+        loadKakaoSDK()
+            .then((kakao) => {
+                if (!mapContainerRef.current) return;
+
+                const options = {
+                    center: new kakao.maps.LatLng(centerLat, centerLng),
+                    level: 5,
+                };
+                const map = new kakao.maps.Map(mapContainerRef.current, options);
+                mapRef.current = map;
+
+                // 줌 컨트롤
+                map.addControl(
+                    new kakao.maps.ZoomControl(),
+                    kakao.maps.ControlPosition.RIGHT
+                );
+
+                // 내 위치 마커 (커스텀 오버레이)
+                if (lat && lng) {
+                    const myLocationContent = `
+                        <div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+                            <div style="width:36px;height:36px;background:rgba(255,122,0,0.15);border-radius:50%;animation:pulse 2s infinite;position:absolute;"></div>
+                            <div style="width:14px;height:14px;background:#FF7A00;border-radius:50%;border:3px solid #fff;box-shadow:0 0 8px rgba(0,0,0,0.25);position:relative;z-index:1;"></div>
+                        </div>
+                    `;
+                    new kakao.maps.CustomOverlay({
+                        position: new kakao.maps.LatLng(lat, lng),
+                        content: myLocationContent,
+                        yAnchor: 0.5,
+                        xAnchor: 0.5,
+                        map: map,
+                    });
+                }
+
+                // 가게 마커 추가
+                addStoreMarkers(kakao, map, stores);
+            })
+            .catch((err) => {
+                console.error('[KakaoMap] SDK init failed:', err);
+                setSdkFailed(true);
+            });
+
+        return () => {
+            // cleanup markers & overlays
+            markersRef.current.forEach(m => m.setMap(null));
+            overlaysRef.current.forEach(o => o.setMap(null));
+            markersRef.current = [];
+            overlaysRef.current = [];
+        };
+    }, [lat, lng]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // stores 변경 시 마커 업데이트
+    useEffect(() => {
+        if (!mapRef.current || !window.kakao) return;
+        addStoreMarkers(window.kakao, mapRef.current, stores);
+    }, [stores]);
 
     // SDK 로드 실패 or API 키 없음 → Mock 폴백
     if (sdkFailed) {

@@ -27,17 +27,17 @@ export default function TermsPage() {
                 </div>
 
                 <Section title="제1조 (목적)">
-                    <p>이 약관은 (주)당근헬스(이하 "회사")가 제공하는 <strong>저녁떨이</strong> 서비스(이하 "서비스")의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+                    <p>이 약관은 (주)당근헬스(이하 &ldquo;회사&rdquo;)가 제공하는 <strong>저녁떨이</strong> 서비스(이하 &ldquo;서비스&rdquo;)의 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
                 </Section>
 
                 <Section title="제2조 (용어의 정의)">
                     <ol style={{ paddingLeft: '18px' }}>
-                        <li style={{ marginBottom: '6px' }}><strong>"서비스"</strong>란 위치 기반 마감 임박 상품 할인 정보 제공 및 픽업 예약 플랫폼인 저녁떨이 앱·웹을 말합니다.</li>
-                        <li style={{ marginBottom: '6px' }}><strong>"회원"</strong>이란 본 약관에 동의하고 회원가입을 완료한 이용자를 말합니다.</li>
-                        <li style={{ marginBottom: '6px' }}><strong>"소비자 회원"</strong>이란 서비스를 통해 할인 상품을 탐색하고 주문을 생성하는 회원을 말합니다.</li>
-                        <li style={{ marginBottom: '6px' }}><strong>"사장님 회원"</strong>이란 서비스에 매장을 등록하고 마감 임박 상품을 등록하는 판매자 회원을 말합니다.</li>
-                        <li style={{ marginBottom: '6px' }}><strong>"주문"</strong>이란 소비자 회원이 특정 상품에 대해 픽업 의사를 표시하는 예약 행위를 말하며, 실제 결제는 매장 현장에서 이루어집니다.</li>
-                        <li><strong>"포인트"</strong>란 서비스 이용 시 적립되어 향후 주문에 사용할 수 있는 내부 가상 화폐를 말합니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>&ldquo;서비스&rdquo;</strong>란 위치 기반 마감 임박 상품 할인 정보 제공 및 픽업 예약 플랫폼인 저녁떨이 앱·웹을 말합니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>&ldquo;회원&rdquo;</strong>이란 본 약관에 동의하고 회원가입을 완료한 이용자를 말합니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>&ldquo;소비자 회원&rdquo;</strong>이란 서비스를 통해 할인 상품을 탐색하고 주문을 생성하는 회원을 말합니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>&ldquo;사장님 회원&rdquo;</strong>이란 서비스에 매장을 등록하고 마감 임박 상품을 등록하는 판매자 회원을 말합니다.</li>
+                        <li style={{ marginBottom: '6px' }}><strong>&ldquo;주문&rdquo;</strong>이란 소비자 회원이 특정 상품에 대해 픽업 의사를 표시하는 예약 행위를 말하며, 실제 결제는 매장 현장에서 이루어집니다.</li>
+                        <li><strong>&ldquo;포인트&rdquo;</strong>란 서비스 이용 시 적립되어 향후 주문에 사용할 수 있는 내부 가상 화폐를 말합니다.</li>
                     </ol>
                 </Section>
 

@@ -31,7 +31,7 @@ export default function StoreRegisterPage() {
             showToast('사장님 계정으로만 접근 가능합니다.', 'error');
             router.push('/');
         }
-    }, [profile]);
+    }, [profile, router, showToast]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

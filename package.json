@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "analyze": "ANALYZE=true next build",
     "test": "npx playwright test",
     "test:e2e": "npx playwright test --ui"
   },
@@ -21,6 +22,7 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.1",
     "@playwright/test": "^1.58.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",

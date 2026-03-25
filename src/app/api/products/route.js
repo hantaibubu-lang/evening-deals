@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
 import { sanitizeString, isValidLength, safeParseInt, isOneOf, isValidHttpUrl } from '@/utils/validate';
+import { apiSuccess, apiError, ApiErrors } from '@/lib/apiResponse';
 
 const ALLOWED_CATEGORIES = ['mart', 'restaurant', 'bakery', 'meat', 'vegetable', 'seafood', 'dairy'];
 
@@ -11,7 +11,7 @@ export async function POST(request) {
         // 인증 체크
         const { profile, error: authError } = await verifyAuth(request);
         if (authError || !profile) {
-            return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
+            return ApiErrors.unauthorized(authError);
         }
 
         const body = await request.json();
@@ -19,44 +19,44 @@ export async function POST(request) {
 
         // 입력 유효성 검사
         if (!name || !isValidLength(name, 1, 200)) {
-            return NextResponse.json({ error: '상품명은 1~200자 이내로 입력해주세요.' }, { status: 400 });
+            return ApiErrors.badRequest('상품명은 1~200자 이내로 입력해주세요.');
         }
         const parsedOriginalPrice = safeParseInt(originalPrice, 100, 10000000);
         const parsedDiscountPrice = safeParseInt(discountPrice, 100, 10000000);
         const parsedQuantity = safeParseInt(quantity, 1, 9999);
         if (!parsedOriginalPrice || !parsedDiscountPrice || !parsedQuantity) {
-            return NextResponse.json({ error: '가격과 수량은 유효한 양의 정수여야 합니다.' }, { status: 400 });
+            return ApiErrors.badRequest('가격과 수량은 유효한 양의 정수여야 합니다.');
         }
         if (parsedDiscountPrice >= parsedOriginalPrice) {
-            return NextResponse.json({ error: '할인가는 원가보다 낮아야 합니다.' }, { status: 400 });
+            return ApiErrors.badRequest('할인가는 원가보다 낮아야 합니다.');
         }
         if (category && !isOneOf(category, ALLOWED_CATEGORIES)) {
-            return NextResponse.json({ error: '유효하지 않은 카테고리입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 카테고리입니다.');
         }
         if (imageUrl && !isValidHttpUrl(imageUrl)) {
-            return NextResponse.json({ error: '유효하지 않은 이미지 URL입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 이미지 URL입니다.');
         }
 
         // expiresAt 검증: 필수, 현재 시간 이후, 최대 7일 이내
         if (!expiresAt) {
-            return NextResponse.json({ error: '유통기한은 필수입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유통기한은 필수입니다.');
         }
         const expiresDate = new Date(expiresAt);
         const now = new Date();
         const maxExpiry = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         if (isNaN(expiresDate.getTime())) {
-            return NextResponse.json({ error: '유효하지 않은 날짜 형식입니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유효하지 않은 날짜 형식입니다.');
         }
         if (expiresDate <= now) {
-            return NextResponse.json({ error: '유통기한은 현재 시간 이후여야 합니다.' }, { status: 400 });
+            return ApiErrors.badRequest('유통기한은 현재 시간 이후여야 합니다.');
         }
         if (expiresDate > maxExpiry) {
-            return NextResponse.json({ error: '마감 할인 상품의 유통기한은 7일 이내여야 합니다.' }, { status: 400 });
+            return ApiErrors.badRequest('마감 할인 상품의 유통기한은 7일 이내여야 합니다.');
         }
 
         // 역할 체크: manager, store_manager, admin만 상품 등록 가능
         if (!['manager', 'store_manager', 'admin'].includes(profile.role)) {
-            return NextResponse.json({ error: '상품 등록 권한이 없습니다.' }, { status: 403 });
+            return ApiErrors.forbidden('상품 등록 권한이 없습니다.');
         }
 
         const sanitizedName = sanitizeString(name);
@@ -71,13 +71,13 @@ export async function POST(request) {
 
         if (storesError) {
             console.error('Stores error:', storesError);
-            return NextResponse.json({ error: 'Failed to fetch store' }, { status: 500 });
+            return ApiErrors.server('Failed to fetch store');
         }
 
         const storeId = stores?.[0]?.id;
 
         if (!storeId) {
-            return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+            return ApiErrors.notFound('Store not found');
         }
 
         // DB 인서트
@@ -100,9 +100,9 @@ export async function POST(request) {
 
         if (error) throw error;
 
-        return NextResponse.json({ success: true, data }, { status: 201 });
+        return apiSuccess({ data }, 201);
     } catch (e) {
         console.error('Create product error:', e);
-        return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
+        return ApiErrors.server('Failed to create product');
     }
 }

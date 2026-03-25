@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 
 export default function CheckoutError({ error, reset }) {
     useEffect(() => { console.error('Checkout error:', error); }, [error]);
@@ -16,9 +17,9 @@ export default function CheckoutError({ error, reset }) {
                 <button onClick={reset} style={{ padding: '12px 28px', borderRadius: '8px', backgroundColor: 'var(--primary)', color: '#fff', fontWeight: '700', border: 'none', cursor: 'pointer' }}>
                     다시 시도
                 </button>
-                <a href="/" style={{ padding: '12px 28px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: '700', textDecoration: 'none', border: '1px solid var(--border-color)' }}>
+                <Link href="/" style={{ padding: '12px 28px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: '700', textDecoration: 'none', border: '1px solid var(--border-color)' }}>
                     홈으로
-                </a>
+                </Link>
             </div>
         </main>
     );

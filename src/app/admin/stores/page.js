@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/utils/apiAuth';
 import { useToast } from '@/components/Toast';
@@ -25,15 +25,15 @@ export default function AdminStoresPage() {
     const [rejectModal, setRejectModal] = useState(null); // { storeId, storeName }
     const [rejectReason, setRejectReason] = useState('');
 
-    const fetchStores = async () => {
+    const fetchStores = useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await fetchWithAuth(`/api/stores?status=${filter}`);
             if (res.ok) setStores(await res.json());
         } catch {} finally { setIsLoading(false); }
-    };
+    }, [filter]);
 
-    useEffect(() => { fetchStores(); }, [filter]);
+    useEffect(() => { fetchStores(); }, [fetchStores]);
 
     const handleApprove = async (storeId) => {
         if (!confirm('이 가게를 승인하시겠습니까?')) return;

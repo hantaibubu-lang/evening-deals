@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { apiSuccess, apiError, ApiErrors } from '@/lib/apiResponse';
 
 export async function GET(request, { params }) {
     const { id } = params;
@@ -17,7 +18,7 @@ export async function GET(request, { params }) {
 
         if (error || !product) {
             console.error('Product Fetch Error:', error);
-            return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+            return ApiErrors.notFound('Product not found');
         }
 
         // 리뷰 + 같은 매장의 다른 상품 병렬 조회
@@ -83,15 +84,17 @@ export async function GET(request, { params }) {
             })),
         };
 
-        return NextResponse.json(formattedProduct);
+        const response = NextResponse.json(formattedProduct);
+        response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=120');
+        return response;
     } catch (e) {
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return ApiErrors.server();
     }
 }
 
 export async function PATCH(request, { params }) {
     const { profile, error: authError, status: authStatus } = await requireRole(request, ['manager', 'store_manager', 'admin']);
-    if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
+    if (authError) return apiError(authError, authStatus);
 
     const { id } = params;
 
@@ -104,7 +107,7 @@ export async function PATCH(request, { params }) {
                 .eq('id', id)
                 .single();
             if (!product || product.store?.owner_id !== profile.id) {
-                return NextResponse.json({ error: '본인 매장의 상품만 수정할 수 있습니다.' }, { status: 403 });
+                return ApiErrors.forbidden('본인 매장의 상품만 수정할 수 있습니다.');
             }
         }
 
@@ -112,7 +115,7 @@ export async function PATCH(request, { params }) {
         const { status } = body;
 
         if (!status || !['available', 'sold_out', 'expired'].includes(status)) {
-            return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+            return ApiErrors.badRequest('Invalid status');
         }
 
         const { data, error } = await supabase
@@ -124,16 +127,16 @@ export async function PATCH(request, { params }) {
 
         if (error) throw error;
 
-        return NextResponse.json(data);
+        return apiSuccess({ data });
     } catch (e) {
         console.error('Update status error:', e);
-        return NextResponse.json({ error: 'Failed to update status' }, { status: 500 });
+        return ApiErrors.server('Failed to update status');
     }
 }
 
 export async function DELETE(request, { params }) {
     const { profile, error: authError, status: authStatus } = await requireRole(request, ['manager', 'store_manager', 'admin']);
-    if (authError) return NextResponse.json({ error: authError }, { status: authStatus });
+    if (authError) return apiError(authError, authStatus);
 
     const { id } = params;
 
@@ -146,7 +149,7 @@ export async function DELETE(request, { params }) {
                 .eq('id', id)
                 .single();
             if (!product || product.store?.owner_id !== profile.id) {
-                return NextResponse.json({ error: '본인 매장의 상품만 삭제할 수 있습니다.' }, { status: 403 });
+                return ApiErrors.forbidden('본인 매장의 상품만 삭제할 수 있습니다.');
             }
         }
 
@@ -157,9 +160,9 @@ export async function DELETE(request, { params }) {
 
         if (error) throw error;
 
-        return NextResponse.json({ success: true });
+        return apiSuccess();
     } catch (e) {
         console.error('Delete product error:', e);
-        return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });
+        return ApiErrors.server('Failed to delete product');
     }
 }

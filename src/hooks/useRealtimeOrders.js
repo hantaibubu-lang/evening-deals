@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
  */
 export function useRealtimeNewOrders(storeId, onNewOrder) {
     const callbackRef = useRef(onNewOrder);
-    callbackRef.current = onNewOrder;
+    useEffect(() => { callbackRef.current = onNewOrder; });
 
     useEffect(() => {
         if (!storeId) return;
@@ -43,7 +43,7 @@ export function useRealtimeNewOrders(storeId, onNewOrder) {
  */
 export function useRealtimeOrderStatus(userId, onStatusChange) {
     const callbackRef = useRef(onStatusChange);
-    callbackRef.current = onStatusChange;
+    useEffect(() => { callbackRef.current = onStatusChange; });
 
     useEffect(() => {
         if (!userId) return;

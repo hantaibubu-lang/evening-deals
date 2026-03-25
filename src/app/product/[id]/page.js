@@ -95,23 +95,6 @@ export default function ProductDetail({ params }) {
         });
     };
 
-    if (isLoading) {
-        return (
-            <main className="page-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-                <div className="animate-pulse" style={{ fontSize: '1.2rem', color: 'var(--primary)', fontWeight: 'bold' }}>처리 중...</div>
-            </main>
-        );
-    }
-
-    if (!product) {
-        return (
-            <main className="page-content" style={{ padding: '24px', textAlign: 'center' }}>
-                <h2>존재하지 않거나 불러올 수 없는 상품입니다.</h2>
-                <Link href="/" style={{ color: 'var(--primary)', marginTop: '16px', display: 'inline-block' }}>홈으로 돌아가기</Link>
-            </main>
-        );
-    }
-
     // Schema.org JSON-LD 구조화 데이터 + 동적 메타 태그
     useEffect(() => {
         if (!product) return;
@@ -173,6 +156,23 @@ export default function ProductDetail({ params }) {
             if (el) el.remove();
         };
     }, [product]);
+
+    if (isLoading) {
+        return (
+            <main className="page-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                <div className="animate-pulse" style={{ fontSize: '1.2rem', color: 'var(--primary)', fontWeight: 'bold' }}>처리 중...</div>
+            </main>
+        );
+    }
+
+    if (!product) {
+        return (
+            <main className="page-content" style={{ padding: '24px', textAlign: 'center' }}>
+                <h2>존재하지 않거나 불러올 수 없는 상품입니다.</h2>
+                <Link href="/" style={{ color: 'var(--primary)', marginTop: '16px', display: 'inline-block' }}>홈으로 돌아가기</Link>
+            </main>
+        );
+    }
 
     return (
         <main className="page-content" style={{ paddingBottom: '80px' }}>

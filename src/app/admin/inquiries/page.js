@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/utils/apiAuth';
 import { useToast } from '@/components/Toast';
@@ -29,7 +29,7 @@ export default function AdminInquiriesPage() {
     const [actionLoading, setActionLoading] = useState(null);
     const [expandedId, setExpandedId] = useState(null);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await fetchWithAuth(`/api/admin/inquiries?status=${statusFilter}&category=${categoryFilter}&page=${page}`);
@@ -40,9 +40,9 @@ export default function AdminInquiriesPage() {
                 setTotalPages(data.totalPages || 1);
             }
         } catch {} finally { setIsLoading(false); }
-    };
+    }, [statusFilter, categoryFilter, page]);
 
-    useEffect(() => { fetchData(); }, [statusFilter, categoryFilter, page]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleReply = async () => {
         if (!replyModal || !replyText.trim()) {

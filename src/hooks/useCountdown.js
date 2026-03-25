@@ -7,22 +7,20 @@ import { useState, useEffect } from 'react';
  * @returns {{ timeLeft: string, isUrgent: boolean, isExpired: boolean }}
  */
 export function useCountdown(expiresAt) {
-    const [state, setState] = useState(() => calcState(expiresAt));
+    const [, setTick] = useState(0);
 
     useEffect(() => {
         if (!expiresAt) return;
 
-        setState(calcState(expiresAt));
         const timer = setInterval(() => {
-            const next = calcState(expiresAt);
-            setState(next);
-            if (next.isExpired) clearInterval(timer);
+            setTick(t => t + 1);
+            if (calcState(expiresAt).isExpired) clearInterval(timer);
         }, 1000);
 
         return () => clearInterval(timer);
     }, [expiresAt]);
 
-    return state;
+    return calcState(expiresAt);
 }
 
 function calcState(expiresAt) {

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { useNotification } from '@/components/NotificationProvider';
@@ -13,16 +13,14 @@ const DEFAULT_SETTINGS = {
 export default function NotificationSettings() {
     const { showToast } = useToast();
     const { permission, requestPermission } = useNotification();
-    const [settings, setSettings] = useState(DEFAULT_SETTINGS);
-    const [loaded, setLoaded] = useState(false);
-
-    useEffect(() => {
+    const [settings, setSettings] = useState(() => {
+        if (typeof window === 'undefined') return DEFAULT_SETTINGS;
         try {
             const saved = localStorage.getItem('notification_settings');
-            if (saved) setSettings(JSON.parse(saved));
-        } catch { /* ignore */ }
-        setLoaded(true);
-    }, []);
+            return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+        } catch { return DEFAULT_SETTINGS; }
+    });
+    const loaded = useSyncExternalStore(() => () => {}, () => true, () => false);
 
     const toggleSetting = useCallback((key) => {
         setSettings(prev => {

@@ -10,7 +10,9 @@ import { supabase } from '@/lib/supabase';
 export function useRealtimeProducts(onUpdate, options = {}) {
     const { productIds, enabled = true } = options;
     const callbackRef = useRef(onUpdate);
-    callbackRef.current = onUpdate;
+    useEffect(() => { callbackRef.current = onUpdate; });
+
+    const productIdsKey = productIds?.join(',');
 
     useEffect(() => {
         if (!enabled) return;
@@ -26,8 +28,9 @@ export function useRealtimeProducts(onUpdate, options = {}) {
                 },
                 (payload) => {
                     // 특정 상품 ID만 필터링
-                    if (productIds && productIds.length > 0) {
-                        if (!productIds.includes(payload.new.id)) return;
+                    if (productIdsKey) {
+                        const ids = productIdsKey.split(',');
+                        if (!ids.includes(payload.new.id)) return;
                     }
                     callbackRef.current(payload);
                 }
@@ -37,7 +40,7 @@ export function useRealtimeProducts(onUpdate, options = {}) {
         return () => {
             channel.unsubscribe().then(() => supabase.removeChannel(channel));
         };
-    }, [enabled, productIds?.join(',')]); // productIds 변경 시 재구독
+    }, [enabled, productIdsKey]); // productIds 변경 시 재구독
 }
 
 /**
@@ -47,7 +50,7 @@ export function useRealtimeProducts(onUpdate, options = {}) {
  */
 export function useRealtimeStock(productId, onStockChange) {
     const callbackRef = useRef(onStockChange);
-    callbackRef.current = onStockChange;
+    useEffect(() => { callbackRef.current = onStockChange; });
 
     useEffect(() => {
         if (!productId) return;

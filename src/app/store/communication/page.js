@@ -63,7 +63,7 @@ export default function CustomerCommunication() {
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontSize: '0.95rem', fontWeight: '700', marginBottom: '4px' }}>알뜰쇼퍼<span style={{ fontWeight: '400' }}>님</span></div>
                                 <p style={{ fontSize: '1.05rem', lineHeight: '1.5', color: 'var(--text-primary)' }}>
-                                    "사장님, 김치찌개 원가 이하로 올려주셔서 정말 감사해요! 오늘도 따뜻한 저녁 먹었습니다!"
+                                    &ldquo;사장님, 김치찌개 원가 이하로 올려주셔서 정말 감사해요! 오늘도 따뜻한 저녁 먹었습니다!&rdquo;
                                 </p>
                                 <div style={{ fontSize: '0.85rem', color: '#999', marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>오늘 18:30</div>
                             </div>

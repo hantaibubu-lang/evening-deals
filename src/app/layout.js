@@ -1,4 +1,5 @@
 import './globals.css';
+import { Noto_Sans_KR } from 'next/font/google';
 import Navbar from '@/components/Navbar';
 import BottomBar from '@/components/BottomBar';
 import { ToastProvider } from '@/components/Toast';
@@ -7,7 +8,16 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import InstallPrompt from '@/components/InstallPrompt';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
+import OfflineBanner from '@/components/OfflineBanner';
 import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/JsonLd';
+
+const notoSansKR = Noto_Sans_KR({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+  preload: true,
+  fallback: ['-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+});
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://evening-deals.vercel.app'),
@@ -53,13 +63,14 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html lang="ko" className={notoSansKR.className} suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.svg" />
         <OrganizationJsonLd />
         <WebsiteJsonLd />
       </head>
       <body suppressHydrationWarning>
+        <OfflineBanner />
         <ToastProvider>
           <AuthProvider>
             <NotificationProvider>
