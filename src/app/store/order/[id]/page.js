@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { fetchWithAuth } from '@/utils/apiAuth';
 import { useToast } from '@/components/Toast';
 
@@ -136,8 +137,7 @@ export default function OrderDetail({ params }) {
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                             <div style={{ width: '80px', height: '80px', borderRadius: '8px', backgroundColor: '#FFEBEB', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
                                 {order.imageUrl ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={order.imageUrl} alt={order.productName || '상품'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <Image src={order.imageUrl} alt={order.productName || '상품'} fill sizes="80px" style={{ objectFit: 'cover' }} />
                                 ) : (
                                     <span style={{ fontSize: '2.5rem' }}>🛍️</span>
                                 )}

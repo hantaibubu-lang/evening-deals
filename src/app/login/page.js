@@ -175,14 +175,6 @@ export default function LoginPage() {
                         }}>
                             <span style={{ fontSize: '1.1rem' }}>💬</span> 카카오로 3초만에 시작하기
                         </Link>
-                        <Link href="/login/oauth/naver" style={{
-                            width: '100%', padding: '14px', backgroundColor: '#03C75A', color: '#FFFFFF',
-                            fontWeight: '600', borderRadius: '12px', display: 'flex', alignItems: 'center',
-                            justifyContent: 'center', gap: '10px', cursor: 'pointer', border: 'none', textDecoration: 'none',
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.05)', transition: 'transform 0.1s'
-                        }}>
-                            <span style={{ fontSize: '1.1rem' }}>🇳</span> 네이버로 시작하기
-                        </Link>
                     </div>
                 </div>
             </div>

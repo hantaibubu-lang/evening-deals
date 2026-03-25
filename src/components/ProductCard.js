@@ -2,10 +2,13 @@
 import { memo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useFavorite } from '@/hooks/useFavorite';
 
-export default memo(function ProductCard({ product }) {
+export default memo(function ProductCard({ product, isFavorited: initialFavorited = false }) {
+    const { isFavorited, toggle } = useFavorite(product.id, 'PRODUCT', initialFavorited);
+
     return (
-        <Link href={`/product/${product.id}`} aria-label={`${product.name}, ${product.discountRate || 30}% 할인, ${product.discountPrice?.toLocaleString()}원`} className="product-card fade-in" style={{ display: 'block', textDecoration: 'none', color: 'inherit', transition: 'transform 0.2s', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
+        <Link href={`/product/${product.id}`} aria-label={`${product.name}, ${product.discountRate || 30}% 할인, ${product.discountPrice?.toLocaleString()}원`} className="product-card fade-in" style={{ display: 'block', textDecoration: 'none', color: 'inherit', transition: 'transform 0.2s', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', position: 'relative' }}>
             <div className="product-image-container" style={{ position: 'relative', overflow: 'hidden', aspectRatio: '1/1' }}>
                 <div aria-hidden="true" className="badge-discount" style={{ position: 'absolute', top: '10px', left: '10px', backgroundColor: 'var(--primary)', color: 'white', padding: '4px 10px', borderRadius: '8px', fontWeight: '900', fontSize: '0.9rem', zIndex: 2, boxShadow: '0 4px 8px rgba(255,122,0,0.3)' }}>
                     {product.discountRate || 30}%
@@ -15,6 +18,19 @@ export default memo(function ProductCard({ product }) {
                         AD
                     </div>
                 )}
+                {/* 찜하기 버튼 */}
+                <button
+                    onClick={toggle}
+                    aria-label={isFavorited ? '찜 해제' : '찜하기'}
+                    style={{
+                        position: 'absolute', bottom: '44px', right: '8px', zIndex: 3,
+                        background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: '50%',
+                        width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', fontSize: '1rem', boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                    }}
+                >
+                    {isFavorited ? '❤️' : '🤍'}
+                </button>
                 <div style={{ position: 'absolute', bottom: '0', left: '0', right: '0', background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)', padding: '20px 10px 8px', zIndex: 1 }}>
                     <span className="badge-closing" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>🔥 30분 마감</span>
                 </div>

@@ -29,11 +29,12 @@ export async function GET(request) {
         const formattedOrders = orders.map(o => ({
             id: o.id,
             date: new Date(o.created_at).toISOString().split('T')[0],
+            created_at: o.created_at,
             storeName: o.store?.name || '알 수 없는 마트',
             productName: o.quantity > 1 ? `${o.product?.name} 외 ${o.quantity - 1}건` : o.product?.name,
             totalPrice: o.total_price,
-
-            
+            status: o.status,
+            quantity: o.quantity,
             imageUrl: o.product?.image_url || ''
         }));
 
