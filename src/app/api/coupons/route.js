@@ -44,7 +44,7 @@ export async function GET(request) {
         return NextResponse.json(formatted);
     } catch (e) {
         console.error('쿠폰 조회 오류:', e);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
     }
 }
 
@@ -155,6 +155,6 @@ export async function POST(request) {
         return NextResponse.json({ success: true, coupon });
     } catch (e) {
         console.error('쿠폰 발급 오류:', e);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
     }
 }

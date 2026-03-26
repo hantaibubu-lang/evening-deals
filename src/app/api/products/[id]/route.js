@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
 
         if (error || !product) {
             console.error('Product Fetch Error:', error);
-            return ApiErrors.notFound('Product not found');
+            return ApiErrors.notFound('상품을 찾을 수 없습니다.');
         }
 
         // 리뷰 + 같은 매장의 다른 상품 병렬 조회
@@ -115,7 +115,7 @@ export async function PATCH(request, { params }) {
         const { status } = body;
 
         if (!status || !['available', 'sold_out', 'expired'].includes(status)) {
-            return ApiErrors.badRequest('Invalid status');
+            return ApiErrors.badRequest('유효하지 않은 상태입니다.');
         }
 
         const { data, error } = await supabase
@@ -130,7 +130,7 @@ export async function PATCH(request, { params }) {
         return apiSuccess({ data });
     } catch (e) {
         console.error('Update status error:', e);
-        return ApiErrors.server('Failed to update status');
+        return ApiErrors.server('상태 변경에 실패했습니다.');
     }
 }
 
@@ -163,6 +163,6 @@ export async function DELETE(request, { params }) {
         return apiSuccess();
     } catch (e) {
         console.error('Delete product error:', e);
-        return ApiErrors.server('Failed to delete product');
+        return ApiErrors.server('상품 삭제에 실패했습니다.');
     }
 }

@@ -50,7 +50,7 @@ export async function GET(request) {
         return NextResponse.json(formatted);
     } catch (e) {
         console.error('리뷰 조회 오류:', e);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
     }
 }
 
@@ -89,7 +89,7 @@ export async function POST(request) {
 
         // 주문 확인 및 스토어 찾기
         const { data: order, error: orderErr } = await supabase.from('orders').select('store_id').eq('id', orderId).single();
-        if (orderErr) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        if (orderErr) return NextResponse.json({ error: '주문을 찾을 수 없습니다.' }, { status: 404 });
 
         // 생성
         const { data, error } = await supabase.from('reviews').insert([{
@@ -128,6 +128,6 @@ export async function POST(request) {
         });
     } catch (e) {
         console.error('리뷰 작성 오류:', e);
-        return NextResponse.json({ error: 'Server error' }, { status: 500 });
+        return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
     }
 }

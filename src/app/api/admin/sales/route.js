@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function GET(request) {
     const { error: authError, status } = await requireRole(request, ['admin']);
@@ -10,6 +11,8 @@ export async function GET(request) {
     const period = searchParams.get('period') || 'daily'; // daily | weekly | monthly
 
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'admin-sales' });
+        if (limited) return limited;
         const now = new Date();
         let startDate, groupFormat, labels;
 

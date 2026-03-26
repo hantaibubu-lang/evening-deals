@@ -1,10 +1,29 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Script from 'next/script';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
+const CONSENT_KEY = 'cookie_consent';
 
 export default function GoogleAnalytics() {
-    if (!GA_ID) return null;
+    const [consented, setConsented] = useState(false);
+
+    useEffect(() => {
+        const checkConsent = () => {
+            try {
+                const consent = JSON.parse(localStorage.getItem(CONSENT_KEY) || '{}');
+                setConsented(consent.analytics === true);
+            } catch {
+                setConsented(false);
+            }
+        };
+        checkConsent();
+        // CookieConsent 컴포넌트에서 동의 변경 시 반영
+        const interval = setInterval(checkConsent, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    if (!GA_ID || !consented) return null;
 
     return (
         <>

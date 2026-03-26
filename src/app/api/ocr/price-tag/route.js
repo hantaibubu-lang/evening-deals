@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 export async function POST(request) {
+    const limited = await checkRateLimit(request, { limit: 10, windowMs: 60000, keyPrefix: 'ocr' });
+    if (limited) return limited;
+
     const { error: authError, status } = await requireRole(request, ['manager', 'store_manager', 'admin']);
     if (authError) return NextResponse.json({ error: authError }, { status });
 

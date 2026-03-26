@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
 import { logEvent } from '@/lib/logger';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function POST(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 5, windowMs: 60000, keyPrefix: 'payments' });
+        if (limited) return limited;
         const { profile, error: authError } = await verifyAuth(request);
         if (authError || !profile) {
             return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });

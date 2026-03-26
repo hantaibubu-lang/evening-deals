@@ -108,6 +108,6 @@ export async function GET(request) {
         });
     } catch (e) {
         console.error('Products nearby error:', e);
-        return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+        return NextResponse.json({ error: '상품 목록을 불러오지 못했습니다.' }, { status: 500 });
     }
 }

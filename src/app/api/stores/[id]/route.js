@@ -33,7 +33,7 @@ export async function GET(request, { params }) {
 
         const store = storeRes.data;
         if (storeRes.error || !store) {
-            return ApiErrors.notFound('Store not found');
+            return ApiErrors.notFound('매장을 찾을 수 없습니다.');
         }
 
         const reviews = reviewsRes.data || [];

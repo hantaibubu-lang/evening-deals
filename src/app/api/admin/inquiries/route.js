@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // GET: 문의 목록 조회
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'admin-inquiries' });
+        if (limited) return limited;
         const { error: authError, status } = await requireRole(request, ['admin']);
         if (authError) return NextResponse.json({ error: authError }, { status });
 
@@ -55,7 +58,7 @@ export async function GET(request) {
         });
     } catch (e) {
         console.error('Admin inquiries GET error:', e);
-        return NextResponse.json({ error: 'Failed to fetch inquiries' }, { status: 500 });
+        return NextResponse.json({ error: '문의 목록을 불러오지 못했습니다.' }, { status: 500 });
     }
 }
 

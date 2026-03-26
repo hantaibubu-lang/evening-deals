@@ -71,13 +71,13 @@ export async function POST(request) {
 
         if (storesError) {
             console.error('Stores error:', storesError);
-            return ApiErrors.server('Failed to fetch store');
+            return ApiErrors.server('매장 정보를 불러오지 못했습니다.');
         }
 
         const storeId = stores?.[0]?.id;
 
         if (!storeId) {
-            return ApiErrors.notFound('Store not found');
+            return ApiErrors.notFound('등록된 매장을 찾을 수 없습니다.');
         }
 
         // DB 인서트
@@ -103,6 +103,6 @@ export async function POST(request) {
         return apiSuccess({ data }, 201);
     } catch (e) {
         console.error('Create product error:', e);
-        return ApiErrors.server('Failed to create product');
+        return ApiErrors.server('상품 등록에 실패했습니다.');
     }
 }

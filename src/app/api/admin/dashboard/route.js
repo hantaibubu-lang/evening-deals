@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'admin-dash' });
+        if (limited) return limited;
         const { error: authError, status } = await requireRole(request, ['admin']);
         if (authError) {
             return NextResponse.json({ error: authError }, { status });
@@ -59,6 +62,6 @@ export async function GET(request) {
 
     } catch (e) {
         console.error('Dashboard fetch error:', e);
-        return NextResponse.json({ error: 'Failed to load dashboard' }, { status: 500 });
+        return NextResponse.json({ error: '대시보드를 불러오지 못했습니다.' }, { status: 500 });
     }
 }

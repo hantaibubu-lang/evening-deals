@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { getAdminMessaging } from '@/lib/firebaseAdmin';
 import { requireRole } from '@/lib/authServer';
 import { logEvent } from '@/lib/logger';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 /**
  * 특정 유저 또는 전체 유저에게 푸시 알림 발송
@@ -11,6 +12,8 @@ import { logEvent } from '@/lib/logger';
  */
 export async function POST(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 10, windowMs: 60000, keyPrefix: 'notif-send' });
+        if (limited) return limited;
         // 어드민 또는 store_manager만 발송 가능
         const user = await requireRole(request, ['admin', 'store_manager']);
         if (user instanceof NextResponse) return user;

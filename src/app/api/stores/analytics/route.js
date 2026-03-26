@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'store-analytics' });
+        if (limited) return limited;
         const { profile, error: authError, status } = await requireRole(request, ['manager', 'store_manager', 'admin']);
         if (authError) return NextResponse.json({ error: authError }, { status });
 
@@ -18,7 +21,7 @@ export async function GET(request) {
             .limit(1);
 
         if (!stores || stores.length === 0) {
-            return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+            return NextResponse.json({ error: '매장을 찾을 수 없습니다.' }, { status: 404 });
         }
 
         const storeId = stores[0].id;
@@ -201,6 +204,6 @@ export async function GET(request) {
         });
     } catch (e) {
         console.error('Store analytics error:', e);
-        return NextResponse.json({ error: 'Failed to load analytics' }, { status: 500 });
+        return NextResponse.json({ error: '매출 분석을 불러오지 못했습니다.' }, { status: 500 });
     }
 }

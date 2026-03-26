@@ -56,6 +56,6 @@ export async function GET(request) {
         return NextResponse.json(stores || []);
     } catch (e) {
         console.error('Stores nearby error:', e);
-        return NextResponse.json({ error: 'Failed to fetch stores' }, { status: 500 });
+        return NextResponse.json({ error: '매장 목록을 불러오지 못했습니다.' }, { status: 500 });
     }
 }

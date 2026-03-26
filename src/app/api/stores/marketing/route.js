@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 20, windowMs: 60000, keyPrefix: 'store-marketing' });
+        if (limited) return limited;
         const { profile, error: authError, status } = await requireRole(request, ['manager', 'store_manager']);
         if (authError) {
             return NextResponse.json({ error: authError }, { status });
@@ -93,6 +96,6 @@ export async function GET(request) {
         });
     } catch (e) {
         console.error('Marketing data error:', e);
-        return NextResponse.json({ error: 'Failed to fetch marketing data' }, { status: 500 });
+        return NextResponse.json({ error: '마케팅 데이터를 불러오지 못했습니다.' }, { status: 500 });
     }
 }

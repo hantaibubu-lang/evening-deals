@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // GET: 가게별 정산 내역 조회
 export async function GET(request) {
@@ -12,6 +13,8 @@ export async function GET(request) {
     const month = searchParams.get('month'); // 2026-03 형태
 
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'admin-settle' });
+        if (limited) return limited;
         // 정산 기간 계산
         const targetMonth = month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
         const [year, mon] = targetMonth.split('-').map(Number);

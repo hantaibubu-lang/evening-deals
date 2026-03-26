@@ -11,6 +11,7 @@ import GoogleAnalytics from '@/components/GoogleAnalytics';
 import OfflineBanner from '@/components/OfflineBanner';
 import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/JsonLd';
 import RouteAnnouncer from '@/components/RouteAnnouncer';
+import CookieConsent from '@/components/CookieConsent';
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
@@ -87,6 +88,7 @@ export default function RootLayout({ children }) {
               <ServiceWorkerRegister />
               <InstallPrompt />
               <GoogleAnalytics />
+              <CookieConsent />
             </NotificationProvider>
           </AuthProvider>
         </ToastProvider>

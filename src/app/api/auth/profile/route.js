@@ -1,9 +1,12 @@
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { apiSuccess, ApiErrors } from '@/lib/apiResponse';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // 회원가입 시 users 테이블에 프로필 생성
 export async function POST(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 20, windowMs: 60000, keyPrefix: 'auth-profile' });
+        if (limited) return limited;
         const { email, name, role } = await request.json();
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

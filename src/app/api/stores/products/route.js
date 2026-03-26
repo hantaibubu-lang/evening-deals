@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // 사장님 자신의 가게 상품 목록 조회
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'store-products' });
+        if (limited) return limited;
         const { profile, error: authError } = await verifyAuth(request);
         if (authError || !profile) {
             return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });

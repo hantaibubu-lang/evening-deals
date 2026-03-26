@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
 import { isValidUUID } from '@/utils/validate';
 import { checkAndIssueMilestoneCoupon } from '@/lib/couponService';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // 허용된 상태 전이 맵
 const VALID_TRANSITIONS = {
@@ -15,6 +16,8 @@ const VALID_TRANSITIONS = {
 // 사장님 스토어의 주문 조회 (manager 전용)
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'store-orders' });
+        if (limited) return limited;
         const { profile, error: authError, status } = await requireRole(request, ['manager', 'admin']);
         if (authError) {
             return NextResponse.json({ error: authError }, { status });
@@ -22,7 +25,7 @@ export async function GET(request) {
 
         const { data: stores } = await supabase.from('stores').select('id').eq('owner_id', profile.id).limit(1);
         if (!stores || stores.length === 0) {
-            return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+            return NextResponse.json({ error: '매장을 찾을 수 없습니다.' }, { status: 404 });
         }
 
         const storeId = stores[0].id;
@@ -61,7 +64,7 @@ export async function GET(request) {
         return NextResponse.json(formattedOrders);
     } catch (e) {
         console.error('Store orders fetch error:', e);
-        return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+        return NextResponse.json({ error: '주문 목록을 불러오지 못했습니다.' }, { status: 500 });
     }
 }
 
@@ -149,6 +152,6 @@ export async function PATCH(request) {
         return NextResponse.json({ success: true, order: data });
     } catch (e) {
         console.error('Store orders update error:', e);
-        return NextResponse.json({ error: 'Failed to update order status' }, { status: 500 });
+        return NextResponse.json({ error: '주문 상태 변경에 실패했습니다.' }, { status: 500 });
     }
 }

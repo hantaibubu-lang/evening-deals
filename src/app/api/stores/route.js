@@ -98,7 +98,7 @@ export async function GET(request) {
         return response;
     } catch (e) {
         console.error('Stores fetch error:', e);
-        return ApiErrors.server('Failed to fetch stores');
+        return ApiErrors.server('매장 목록을 불러오지 못했습니다.');
     }
 }
 

@@ -1,0 +1,77 @@
+name: Supabase Database Backup
+
+on:
+  schedule:
+    # 매일 한국 시간 새벽 3시 (UTC 18:00)
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: '수동 백업 사유'
+        required: false
+        default: '수동 백업'
+
+env:
+  BACKUP_RETENTION_DAYS: 30
+
+jobs:
+  backup:
+    name: Database Backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Setup timestamp
+        id: timestamp
+        run: echo "ts=$(date -u +%Y%m%d_%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16 2>/dev/null || \
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Export database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set"
+            exit 1
+          fi
+          pg_dump "$SUPABASE_DB_URL" \
+            --no-owner \
+            --no-acl \
+            --clean \
+            --if-exists \
+            --format=custom \
+            --compress=9 \
+            -f backup_${{ steps.timestamp.outputs.ts }}.dump
+
+          FILESIZE=$(stat -c%s "backup_${{ steps.timestamp.outputs.ts }}.dump")
+          echo "Backup size: $(numfmt --to=iec $FILESIZE)"
+
+          if [ "$FILESIZE" -lt 1024 ]; then
+            echo "::error::Backup file suspiciously small ($FILESIZE bytes)"
+            exit 1
+          fi
+
+      - name: Verify backup integrity
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          pg_restore --list backup_${{ steps.timestamp.outputs.ts }}.dump > /dev/null 2>&1
+          echo "Backup integrity check passed"
+
+      - name: Upload to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ steps.timestamp.outputs.ts }}
+          path: backup_${{ steps.timestamp.outputs.ts }}.dump
+          retention-days: ${{ env.BACKUP_RETENTION_DAYS }}
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Database backup failed at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Check the workflow logs for details."

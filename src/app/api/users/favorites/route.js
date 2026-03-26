@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 20, windowMs: 60000, keyPrefix: 'favorites' });
+        if (limited) return limited;
         const { profile, error: authError } = await verifyAuth(request);
         if (authError || !profile) {
             return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
@@ -49,7 +52,7 @@ export async function GET(request) {
 
     } catch (e) {
         console.error('Favorites fetch error:', e);
-        return NextResponse.json({ error: 'Failed to fetch favorites' }, { status: 500 });
+        return NextResponse.json({ error: '찜 목록을 불러오지 못했습니다.' }, { status: 500 });
     }
 }
 
@@ -89,7 +92,7 @@ export async function POST(request) {
         return NextResponse.json({ success: true, data });
     } catch (e) {
         console.error('Favorite POST error:', e);
-        return NextResponse.json({ error: 'Failed to add favorite' }, { status: 500 });
+        return NextResponse.json({ error: '찜 추가에 실패했습니다.' }, { status: 500 });
     }
 }
 
@@ -122,6 +125,6 @@ export async function DELETE(request) {
         return NextResponse.json({ success: true });
     } catch (e) {
         console.error('Favorite DELETE error:', e);
-        return NextResponse.json({ error: 'Failed to remove favorite' }, { status: 500 });
+        return NextResponse.json({ error: '찜 삭제에 실패했습니다.' }, { status: 500 });
     }
 }

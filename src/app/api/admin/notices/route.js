@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/authServer';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // GET: 공지사항 목록 (관리자)
 export async function GET(request) {
@@ -8,6 +9,8 @@ export async function GET(request) {
     if (authError) return NextResponse.json({ error: authError }, { status });
 
     try {
+        const limited = await checkRateLimit(request, { limit: 20, windowMs: 60000, keyPrefix: 'admin-notices' });
+        if (limited) return limited;
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get('page') || '1');
         const limit = 20;

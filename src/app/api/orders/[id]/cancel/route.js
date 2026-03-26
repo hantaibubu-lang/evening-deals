@@ -3,6 +3,7 @@ import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
 import { isValidUUID } from '@/utils/validate';
 import { logEvent } from '@/lib/logger';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // 토스페이먼츠 결제 취소 (환불)
 async function cancelTossPayment(paymentKey, cancelReason, cancelAmount) {
@@ -33,6 +34,8 @@ async function cancelTossPayment(paymentKey, cancelReason, cancelAmount) {
 // 고객 주문 취소 (PENDING 상태에서만 가능)
 export async function POST(request, { params }) {
     try {
+        const limited = await checkRateLimit(request, { limit: 5, windowMs: 60000, keyPrefix: 'order-cancel' });
+        if (limited) return limited;
         const { id: orderId } = await params;
 
         const { profile, error: authError } = await verifyAuth(request);

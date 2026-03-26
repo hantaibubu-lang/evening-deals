@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin as supabase } from '@/lib/supabase';
 import { verifyAuth } from '@/lib/authServer';
 import { logEvent } from '@/lib/logger';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function GET(request) {
     try {
+        const limited = await checkRateLimit(request, { limit: 30, windowMs: 60000, keyPrefix: 'user-orders' });
+        if (limited) return limited;
         const { profile, error: authError } = await verifyAuth(request);
         if (authError || !profile) {
             return NextResponse.json({ error: authError || '인증이 필요합니다.' }, { status: 401 });
@@ -42,7 +45,7 @@ export async function GET(request) {
 
     } catch (e) {
         console.error('Orders fetch error:', e);
-        return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+        return NextResponse.json({ error: '주문 내역을 불러오지 못했습니다.' }, { status: 500 });
     }
 }
 
@@ -144,7 +147,7 @@ export async function POST(request) {
 
     } catch (e) {
         console.error('Order creation error:', e);
-        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+        return NextResponse.json({ error: '주문 생성에 실패했습니다.' }, { status: 500 });
     }
 }
 
