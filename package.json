@@ -8,8 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "analyze": "ANALYZE=true next build",
-    "test": "npx playwright test",
-    "test:e2e": "npx playwright test --ui"
+    "test": "jest --passWithNoTests",
+    "test:unit": "jest --passWithNoTests",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:all": "jest --passWithNoTests && npx playwright test"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.45.0",
@@ -22,10 +25,15 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@jest/globals": "^30.3.0",
     "@next/bundle-analyzer": "^16.2.1",
     "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "sharp": "^0.34.5"
   }
 }
