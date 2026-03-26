@@ -49,13 +49,29 @@ export function proxy(request) {
     const { pathname } = request.nextUrl;
     const origin = request.headers.get('origin');
 
-    // API 라우트: CORS 처리
+    // API 라우트: CORS + CSRF 처리
     if (pathname.startsWith('/api/')) {
         if (request.method === 'OPTIONS') {
             const res = new NextResponse(null, { status: 204 });
             setCorsHeaders(res, origin);
             return res;
         }
+
+        // CSRF 방어: 상태 변경 메서드에 대해 Origin 검증
+        const CSRF_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+        const CSRF_EXEMPT = ['/api/payments/confirm', '/api/firebase-messaging-sw'];
+        if (CSRF_METHODS.includes(request.method) && !CSRF_EXEMPT.some(p => pathname.startsWith(p))) {
+            const referer = request.headers.get('referer');
+            const trustedOrigin = origin && ALLOWED_ORIGINS.some(a => origin.startsWith(a));
+            const trustedReferer = referer && ALLOWED_ORIGINS.some(a => referer.startsWith(a));
+            if (!trustedOrigin && !trustedReferer) {
+                return NextResponse.json(
+                    { success: false, error: '허용되지 않은 요청 출처입니다.' },
+                    { status: 403 }
+                );
+            }
+        }
+
         const res = NextResponse.next();
         setCorsHeaders(res, origin);
         return res;

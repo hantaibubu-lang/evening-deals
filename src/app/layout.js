@@ -10,6 +10,7 @@ import InstallPrompt from '@/components/InstallPrompt';
 import GoogleAnalytics from '@/components/GoogleAnalytics';
 import OfflineBanner from '@/components/OfflineBanner';
 import { OrganizationJsonLd, WebsiteJsonLd } from '@/components/JsonLd';
+import RouteAnnouncer from '@/components/RouteAnnouncer';
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ['latin'],
@@ -82,6 +83,7 @@ export default function RootLayout({ children }) {
                 </main>
                 <BottomBar />
               </div>
+              <RouteAnnouncer />
               <ServiceWorkerRegister />
               <InstallPrompt />
               <GoogleAnalytics />

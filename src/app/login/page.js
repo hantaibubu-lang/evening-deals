@@ -9,6 +9,7 @@ export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [loginError, setLoginError] = useState('');
     const router = useRouter();
     const searchParams = useSearchParams();
     const { showToast } = useToast();
@@ -18,6 +19,7 @@ export default function LoginPage() {
         e.preventDefault();
         setIsLoading(true);
 
+        setLoginError('');
         try {
             await signIn({ email, password });
             showToast('로그인 성공!');
@@ -30,6 +32,7 @@ export default function LoginPage() {
             const msg = error.message?.includes('Invalid login')
                 ? '이메일 또는 비밀번호가 올바르지 않습니다.'
                 : error.message || '로그인 중 오류가 발생했습니다.';
+            setLoginError(msg);
             showToast(msg, 'error');
         } finally {
             setIsLoading(false);
@@ -79,13 +82,15 @@ export default function LoginPage() {
                             type="email"
                             placeholder="이메일 주소"
                             autoComplete="email"
+                            aria-describedby={loginError ? 'login-error' : undefined}
+                            aria-invalid={loginError ? 'true' : undefined}
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             style={{
                                 width: '100%',
                                 padding: '16px',
                                 borderRadius: '8px',
-                                border: '1px solid var(--border-color)',
+                                border: `1px solid ${loginError ? '#dc3545' : 'var(--border-color)'}`,
                                 backgroundColor: 'var(--bg-secondary)',
                                 fontSize: '1rem'
                             }}
@@ -100,13 +105,15 @@ export default function LoginPage() {
                             type="password"
                             placeholder="비밀번호"
                             autoComplete="current-password"
+                            aria-describedby={loginError ? 'login-error' : undefined}
+                            aria-invalid={loginError ? 'true' : undefined}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             style={{
                                 width: '100%',
                                 padding: '16px',
                                 borderRadius: '8px',
-                                border: '1px solid var(--border-color)',
+                                border: `1px solid ${loginError ? '#dc3545' : 'var(--border-color)'}`,
                                 backgroundColor: 'var(--bg-secondary)',
                                 fontSize: '1rem'
                             }}
@@ -114,6 +121,12 @@ export default function LoginPage() {
                             disabled={isLoading}
                         />
                     </div>
+
+                    {loginError && (
+                        <p id="login-error" role="alert" style={{ color: '#dc3545', fontSize: '0.85rem', margin: '0' }}>
+                            {loginError}
+                        </p>
+                    )}
 
                     <button type="submit" disabled={isLoading} style={{
                         width: '100%',
