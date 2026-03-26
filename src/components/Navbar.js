@@ -65,8 +65,8 @@ export default function Navbar() {
     const isUser = !role || role === 'user' || role === 'consumer';
 
     return (
-        <div className="header-wrapper">
-            <nav className="navbar">
+        <header className="header-wrapper">
+            <nav className="navbar" aria-label="상단 네비게이션">
                 <Link href="/" className="navbar-logo">
                     {role === 'admin' ? '저녁떨이 관리자' : (role === 'manager' || role === 'store_manager' ? '저녁떨이 사장님' : '저녁떨이')}
                     <span className="percent" style={{ display: isUser ? 'flex' : 'none' }}>%</span>
@@ -117,15 +117,15 @@ export default function Navbar() {
                                             <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '4px' }}>내 계정</div>
                                             {userEmail}
                                         </div>
-                                        <button onClick={() => { router.push('/mypage'); setShowProfileMenu(false); }} style={{ width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <button role="menuitem" onClick={() => { router.push('/mypage'); setShowProfileMenu(false); }} style={{ width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             ⚙️ 마이페이지
                                         </button>
-                                        <button onClick={handleLogout} style={{ width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', borderTop: '1px solid var(--border-light)' }}>
+                                        <button role="menuitem" onClick={handleLogout} style={{ width: '100%', textAlign: 'left', padding: '12px 16px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 'bold', borderTop: '1px solid var(--border-light)' }}>
                                             로그아웃
                                         </button>
                                     </>
                                 ) : (
-                                    <button onClick={() => { router.push('/login'); setShowProfileMenu(false); }} style={{ width: '100%', textAlign: 'left', padding: '16px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <button role="menuitem" onClick={() => { router.push('/login'); setShowProfileMenu(false); }} style={{ width: '100%', textAlign: 'left', padding: '16px', background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.95rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         🚀 시작하기 (로그인)
                                     </button>
                                 )}
@@ -134,6 +134,6 @@ export default function Navbar() {
                     </div>
                 </div>
             </nav>
-        </div>
+        </header>
     );
 }

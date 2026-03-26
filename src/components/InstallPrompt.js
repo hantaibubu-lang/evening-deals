@@ -39,7 +39,7 @@ export default function InstallPrompt() {
     if (!show) return null;
 
     return (
-        <div style={{
+        <div role="dialog" aria-label="앱 설치 안내" style={{
             position: 'fixed', bottom: '70px', left: '16px', right: '16px',
             padding: '16px', backgroundColor: '#fff', borderRadius: '16px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.15)', zIndex: 1000,
@@ -54,7 +54,7 @@ export default function InstallPrompt() {
                 padding: '8px 16px', backgroundColor: 'var(--primary)', color: '#fff',
                 border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', flexShrink: 0,
             }}>설치</button>
-            <button onClick={handleDismiss} style={{
+            <button onClick={handleDismiss} aria-label="설치 안내 닫기" style={{
                 background: 'none', border: 'none', fontSize: '1.2rem', color: '#999', cursor: 'pointer', padding: '4px',
             }}>✕</button>
         </div>

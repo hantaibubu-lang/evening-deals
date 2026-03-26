@@ -60,7 +60,7 @@ export default function LoginPage() {
         <main className="page-content" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#fff', padding: '0' }}>
             {/* 뒤로가기 헤더 */}
             <div style={{ height: '56px', display: 'flex', alignItems: 'center', padding: '0 16px' }}>
-                <Link href="/" style={{ fontSize: '1.5rem', textDecoration: 'none' }}>✕</Link>
+                <Link href="/" aria-label="닫기" style={{ fontSize: '1.5rem', textDecoration: 'none' }}>✕</Link>
             </div>
 
             <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column' }}>

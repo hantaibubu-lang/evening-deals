@@ -18,9 +18,9 @@ export function ToastProvider({ children }) {
         <ToastContext.Provider value={{ showToast }}>
             {children}
             {/* Toast Container */}
-            <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 9999, width: '90%', maxWidth: '400px', pointerEvents: 'none' }}>
+            <div role="status" aria-live="polite" aria-atomic="true" style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', gap: '8px', zIndex: 9999, width: '90%', maxWidth: '400px', pointerEvents: 'none' }}>
                 {toasts.map(t => (
-                    <div key={t.id} style={{
+                    <div key={t.id} role={t.type === 'error' ? 'alert' : undefined} style={{
                         padding: '16px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 'bold', color: '#fff',
                         backgroundColor: t.type === 'error' ? '#FF4757' : t.type === 'warning' ? '#F1C40F' : t.type === 'info' ? '#3498DB' : '#222',
                         boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
@@ -29,7 +29,7 @@ export function ToastProvider({ children }) {
                         pointerEvents: 'auto'
                     }}>
                         <span>{t.message}</span>
-                        <button onClick={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))} style={{ background: 'none', border: 'none', color: '#fff', opacity: 0.6, fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>&times;</button>
+                        <button onClick={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))} aria-label="알림 닫기" style={{ background: 'none', border: 'none', color: '#fff', opacity: 0.6, fontSize: '1.2rem', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>&times;</button>
                     </div>
                 ))}
             </div>

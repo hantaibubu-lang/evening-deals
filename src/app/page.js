@@ -297,11 +297,12 @@ function HomeContent() {
       </div>
 
       {/* Distance Filter */}
-      <div className="distance-filter">
+      <div className="distance-filter" role="group" aria-label="반경 필터">
         {RADIUS_OPTIONS.map(r => (
           <button
             key={`dist-${r}`}
             onClick={() => handleProductRadiusChange(r)}
+            aria-pressed={productRadius === r}
             className={`distance-btn ${productRadius === r ? 'active' : ''}`}
           >
             {r}km
@@ -310,20 +311,23 @@ function HomeContent() {
       </div>
 
       {/* Category Filter */}
-      <div className="category-filter">
+      <div className="category-filter" role="group" aria-label="카테고리 필터">
         {categories.map(cat => (
-          <div
+          <button
             key={cat.id}
             onClick={() => handleCategoryChange(cat.id)}
+            aria-pressed={selectedCategory === cat.id}
             className={`category-item ${selectedCategory === cat.id ? 'active' : ''}`}
+            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           >
-            <div className="category-icon">{cat.icon}</div>
+            <div className="category-icon" aria-hidden="true">{cat.icon}</div>
             <span className="category-text">{cat.name}</span>
-          </div>
+          </button>
         ))}
       </div>
 
       {/* Product Feed */}
+      <div aria-live="polite" aria-busy={loadingMore}>
       {recommendedProducts.length > 0 ? (
         <>
           <div className="product-grid mb-xl" style={{ marginTop: 'var(--space-md)' }}>
@@ -355,6 +359,7 @@ function HomeContent() {
           <p className="desc">반경 {productRadius}km 이내에 등록된 상품이 없습니다.</p>
         </div>
       )}
+      </div>
 
       {/* 하단 김해 로컬 스폰서 배너 (수익모델 2) */}
       <section onClick={() => window.open('https://search.naver.com')} style={{ margin: '32px 20px', padding: '24px 16px', backgroundColor: '#f0f4f8', borderRadius: '12px', border: '1px solid #e1e8f0', display: 'flex', alignItems: 'center', gap: '16px', cursor: 'pointer' }}>

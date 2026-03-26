@@ -149,14 +149,17 @@ export default function SearchPage() {
         <main className="page-content" style={{ minHeight: '100vh', paddingBottom: '80px' }}>
             {/* 검색 헤더 */}
             <header style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '12px', borderBottom: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', position: 'sticky', top: 0, zIndex: 10 }}>
-                <Link href="/">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <Link href="/" aria-label="뒤로 가기">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
                 </Link>
                 <div style={{ flex: 1, position: 'relative' }}>
                     <input
-                        type="text"
+                        type="search"
+                        aria-label="상품 검색"
+                        aria-autocomplete="list"
+                        aria-expanded={showSuggestions && suggestions.length > 0}
                         placeholder="상품명, 마트명으로 검색"
                         value={query}
                         onChange={handleQueryChange}
@@ -173,6 +176,7 @@ export default function SearchPage() {
                     {query && (
                         <button
                             onClick={() => { setQuery(''); setSuggestions([]); setShowSuggestions(false); }}
+                            aria-label="검색어 지우기"
                             style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '1.1rem' }}
                         >
                             ✕
@@ -180,7 +184,7 @@ export default function SearchPage() {
                     )}
                     {/* 자동완성 드롭다운 */}
                     {showSuggestions && suggestions.length > 0 && (
-                        <div style={{
+                        <div role="listbox" aria-label="검색 자동완성" style={{
                             position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20,
                             backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderTop: 'none',
                             borderRadius: '0 0 8px 8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
@@ -216,12 +220,13 @@ export default function SearchPage() {
             </header>
 
             {/* 카테고리 필터 */}
-            <div style={{ padding: '12px 16px', overflowX: 'auto', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border-light)', backgroundColor: 'var(--bg-primary)' }}>
+            <div role="group" aria-label="카테고리 필터" style={{ padding: '12px 16px', overflowX: 'auto', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border-light)', backgroundColor: 'var(--bg-primary)' }}>
                 <div style={{ display: 'inline-flex', gap: '8px' }}>
                     {CATEGORIES.map(cat => (
                         <button
                             key={cat.key}
                             onClick={() => handleCategoryChange(cat.key)}
+                            aria-pressed={category === cat.key}
                             style={{
                                 padding: '8px 14px', borderRadius: '20px', fontSize: '0.85rem',
                                 border: category === cat.key ? '1px solid var(--primary)' : '1px solid #e0e0e0',
@@ -263,6 +268,7 @@ export default function SearchPage() {
                                     </button>
                                     <button
                                         onClick={() => clearRecentSearch(term)}
+                                        aria-label={`${term} 검색어 삭제`}
                                         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0 2px' }}
                                     >
                                         ✕
@@ -306,6 +312,7 @@ export default function SearchPage() {
                                 검색 결과 <strong style={{ color: 'var(--primary)' }}>{results.length}</strong>건
                             </div>
                             <select
+                                aria-label="정렬 기준"
                                 value={sort}
                                 onChange={(e) => handleSortChange(e.target.value)}
                                 style={{

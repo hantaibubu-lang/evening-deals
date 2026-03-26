@@ -55,8 +55,8 @@ export const metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: 'cover',
   themeColor: '#FF7A00',
 };
@@ -77,9 +77,9 @@ export default function RootLayout({ children }) {
               <div className="app-container">
                 <a href="#main-content" className="skip-to-content">본문으로 건너뛰기</a>
                 <Navbar />
-                <div id="main-content">
+                <main id="main-content" role="main">
                   {children}
-                </div>
+                </main>
                 <BottomBar />
               </div>
               <ServiceWorkerRegister />

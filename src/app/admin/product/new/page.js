@@ -3,7 +3,8 @@ import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
-import ImageUploader from '@/components/ImageUploader';
+import dynamic from 'next/dynamic';
+const ImageUploader = dynamic(() => import('@/components/ImageUploader'), { ssr: false });
 import { fetchWithAuth } from '@/utils/apiAuth';
 
 export default function ProductRegistrationPage() {
