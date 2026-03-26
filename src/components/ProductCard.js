@@ -47,7 +47,7 @@ export default memo(function ProductCard({ product, isFavorited: initialFavorite
                         <span className="badge-closing" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>🔥 마감 임박</span>
                     )}
                 </div>
-                <Image src={product.imageUrl} alt={`${product.name} 상품 이미지`} fill sizes="(max-width: 480px) 50vw, 240px" style={{ objectFit: 'cover', transition: 'transform 0.5s' }} />
+                <Image src={product.imageUrl} alt={`${product.name} 상품 이미지`} fill sizes="(max-width: 480px) 50vw, 240px" placeholder="blur" blurDataURL="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQwIiBoZWlnaHQ9IjI0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PC9zdmc+" loading="lazy" style={{ objectFit: 'cover', transition: 'transform 0.5s' }} />
             </div>
 
             <div className="product-info" style={{ padding: '12px 10px 16px' }}>

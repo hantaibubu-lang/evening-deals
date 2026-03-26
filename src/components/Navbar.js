@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,23 @@ export default function Navbar() {
         return '위치 찾는 중...';
     });
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const menuRef = useRef(null);
+
+    // Escape 키로 프로필 메뉴 닫기 + 외부 클릭 닫기
+    const closeMenu = useCallback(() => setShowProfileMenu(false), []);
+    useEffect(() => {
+        if (!showProfileMenu) return;
+        const handleKeyDown = (e) => { if (e.key === 'Escape') closeMenu(); };
+        const handleClickOutside = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) closeMenu();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showProfileMenu, closeMenu]);
 
     useEffect(() => {
         if (!('geolocation' in navigator)) return;
@@ -104,7 +121,7 @@ export default function Navbar() {
                     </button>
 
                     {/* 프로필 메뉴 */}
-                    <div style={{ position: 'relative', marginLeft: '8px' }}>
+                    <div ref={menuRef} style={{ position: 'relative', marginLeft: '8px' }}>
                         <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="navbar-btn" aria-label="프로필 메뉴" aria-expanded={showProfileMenu} aria-haspopup="menu" style={{ cursor: 'pointer', width: '36px', height: '36px', borderRadius: '12px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)', transition: 'all 0.2s' }}>
                             {isAuthenticated ? '👤' : '🔑'}
                         </button>
